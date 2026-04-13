@@ -7,6 +7,8 @@ def test_cli_creates_skeleton(tmp_path, capsys) -> None:
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text("time,temperature\n0,1\n", encoding="utf-8")
     output_dir = tmp_path / "Generated"
+    runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
+    runtime_library.write_bytes(b"fake runtime")
 
     exit_code = main(
         [
@@ -17,6 +19,8 @@ def test_cli_creates_skeleton(tmp_path, capsys) -> None:
             str(output_dir),
             "--model-name",
             "Generated",
+            "--runtime-library",
+            str(runtime_library),
         ]
     )
 
@@ -31,6 +35,8 @@ def test_cli_generates_fmu_archive(tmp_path, capsys) -> None:
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text("time,temperature\n0,1\n", encoding="utf-8")
     output_fmu = tmp_path / "Generated.fmu"
+    runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
+    runtime_library.write_bytes(b"fake runtime")
 
     exit_code = main(
         [
@@ -41,6 +47,8 @@ def test_cli_generates_fmu_archive(tmp_path, capsys) -> None:
             str(output_fmu),
             "--model-name",
             "Generated",
+            "--runtime-library",
+            str(runtime_library),
         ]
     )
 

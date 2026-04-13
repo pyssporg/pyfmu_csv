@@ -24,9 +24,15 @@ The current implementation provides an initial end-to-end product for packaging:
 - `.fmu` archive assembly
 - reusable FMI 2.0 Co-Simulation runtime implementation
 - FMI 2.0 C API exports for instantiate/init/step/get/set
+- runtime binary packaging into the generated FMU
+- end-to-end execution through FMPy
 - FMPy-based structural validation
 
-The generated FMU is structurally valid for inspection. The runtime binary exists separately as a native build artifact; automatic insertion into the packaged FMU is still pending.
+The current generated FMU is executable when:
+
+- the native runtime has been built first
+- the simulator supports the packaged host platform
+- the external `csv_path` start value is provided before initialization
 
 ## Runtime Contract
 

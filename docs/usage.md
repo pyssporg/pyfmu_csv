@@ -22,7 +22,20 @@ This command:
 - treats the first column as `time`
 - maps all remaining columns to output variables
 - assigns sequential value references starting at `1`
+- copies the compiled generic FMI runtime into the FMU
 - writes a zipped `.fmu` archive
+
+By default, the generator looks for the compiled runtime at:
+
+```text
+build/runtime/libpyfmu_csv_fmi2_cs.so
+```
+
+You can override that with:
+
+```bash
+--runtime-library /path/to/shared/library
+```
 
 ## Inspect a CSV Contract
 
@@ -49,3 +62,12 @@ PYTHONPATH=python ./venv/bin/python -m pyfmu_csv create-fmu-skeleton \
 ```
 
 Use this when you want to inspect the intermediate package layout before it is zipped into a final `.fmu`.
+
+## Run the Full Verification Chain
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+./venv/bin/python -m pytest tests
+```

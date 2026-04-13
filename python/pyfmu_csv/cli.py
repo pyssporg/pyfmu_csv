@@ -30,6 +30,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Model name to embed in modelDescription.xml.",
     )
     create_parser.add_argument(
+        "--runtime-library",
+        type=Path,
+        help="Path to the compiled reusable FMI shared library to embed in the FMU skeleton.",
+    )
+    create_parser.add_argument(
         "--input-csv",
         type=Path,
         required=True,
@@ -57,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="CsvSignals",
         help="Model name to embed in modelDescription.xml.",
     )
+    generate_parser.add_argument(
+        "--runtime-library",
+        type=Path,
+        help="Path to the compiled reusable FMI shared library to embed in the FMU.",
+    )
 
     inspect_parser = subparsers.add_parser(
         "inspect-csv",
@@ -83,11 +93,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "create-fmu-skeleton":
         model = load_csv_model(args.input_csv, args.model_name)
-        output_path = create_fmu_skeleton(args.output, model)
+        output_path = create_fmu_skeleton(args.output, model, runtime_library=args.runtime_library)
         print(f"Created FMU skeleton at {output_path}")
         return 0
     if args.command == "generate-fmu":
-        output_path = package_fmu_from_csv(args.input_csv, args.output, args.model_name)
+        output_path = package_fmu_from_csv(
+            args.input_csv,
+            args.output,
+            args.model_name,
+            runtime_library=args.runtime_library,
+        )
         print(f"Generated FMU at {output_path}")
         return 0
     if args.command == "inspect-csv":

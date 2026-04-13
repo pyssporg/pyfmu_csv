@@ -35,6 +35,7 @@ Covers:
 
 - package skeleton creation
 - `.fmu` archive assembly
+- runtime binary placement into the FMU layout
 - CLI command behavior
 
 ```bash
@@ -47,6 +48,7 @@ Covers:
 
 - generation of a final `.fmu`
 - structural inspection with FMPy
+- execution of the generated FMU through FMPy using `csv_path`
 
 ```bash
 ./venv/bin/python -m pytest tests/e2e

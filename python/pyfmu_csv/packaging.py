@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import platform
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from textwrap import dedent
@@ -11,18 +13,64 @@ from .model import CsvModelDescription
 from .model_description import build_model_description_xml
 
 
-def create_fmu_skeleton(output_dir: str | Path, model: CsvModelDescription) -> Path:
+def host_platform_tuple() -> tuple[str, str]:
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    if system == "linux":
+        return "linux64", ".so"
+    if system == "darwin":
+        return "darwin64", ".dylib"
+    if system == "windows":
+        return "win64", ".dll"
+
+    raise RuntimeError(f"unsupported host platform: {system}/{machine}")
+
+
+def default_runtime_library_path(project_root: str | Path | None = None) -> Path:
+    root = Path(project_root) if project_root is not None else Path(__file__).resolve().parents[2]
+    _, extension = host_platform_tuple()
+    return root / "build" / "runtime" / f"libpyfmu_csv_fmi2_cs{extension}"
+
+
+def install_runtime_binary(
+    root: Path,
+    model: CsvModelDescription,
+    runtime_library: str | Path | None,
+) -> Path:
+    platform_dir, extension = host_platform_tuple()
+    source = Path(runtime_library) if runtime_library is not None else default_runtime_library_path()
+    if not source.is_file():
+        raise FileNotFoundError(
+            f"runtime library does not exist: {source}. Build the native runtime before packaging the FMU."
+        )
+
+    binary_dir = root / "binaries" / platform_dir
+    binary_dir.mkdir(parents=True, exist_ok=True)
+    destination = binary_dir / f"{model.model_identifier}{extension}"
+    shutil.copy2(source, destination)
+    return destination
+
+
+def create_fmu_skeleton(
+    output_dir: str | Path,
+    model: CsvModelDescription,
+    runtime_library: str | Path | None = None,
+) -> Path:
     root = Path(output_dir)
-    binaries_dir = root / "binaries"
     resources_dir = root / "resources"
     sources_dir = root / "sources"
 
-    binaries_dir.mkdir(parents=True, exist_ok=True)
     resources_dir.mkdir(parents=True, exist_ok=True)
     sources_dir.mkdir(parents=True, exist_ok=True)
 
+    model_description_xml = build_model_description_xml(model)
     (root / "modelDescription.xml").write_text(
-        build_model_description_xml(model),
+        model_description_xml,
+        encoding="utf-8",
+    )
+    (resources_dir / "modelDescription.xml").write_text(
+        model_description_xml,
         encoding="utf-8",
     )
     (resources_dir / "model.json").write_text(
@@ -56,16 +104,7 @@ def create_fmu_skeleton(output_dir: str | Path, model: CsvModelDescription) -> P
         ),
         encoding="utf-8",
     )
-    (binaries_dir / "README.txt").write_text(
-        dedent(
-            """\
-            The reusable runtime binary is not packaged by this bootstrap version.
-            Future versions will place the compiled generic FMI runtime here using
-            the platform-specific FMI binaries layout.
-            """
-        ),
-        encoding="utf-8",
-    )
+    runtime_destination = install_runtime_binary(root, model, runtime_library)
     (sources_dir / "README.txt").write_text(
         dedent(
             """\
@@ -73,6 +112,18 @@ def create_fmu_skeleton(output_dir: str | Path, model: CsvModelDescription) -> P
             The project direction is to reuse one compiled runtime across models.
             """
         ),
+        encoding="utf-8",
+    )
+    (root / "resources" / "runtime.json").write_text(
+        json.dumps(
+            {
+                "binary": str(runtime_destination.relative_to(root)),
+                "platform": runtime_destination.parent.name,
+                "modelIdentifier": model.model_identifier,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -84,6 +135,7 @@ def package_fmu_from_csv(
     output_fmu: str | Path,
     model_name: str,
     csv_path_parameter: str = "csv_path",
+    runtime_library: str | Path | None = None,
 ) -> Path:
     model = load_csv_model(
         csv_path=csv_path,
@@ -95,7 +147,7 @@ def package_fmu_from_csv(
 
     with TemporaryDirectory(prefix="pyfmu_csv_") as temporary_root:
         stage_dir = Path(temporary_root) / destination.stem
-        create_fmu_skeleton(stage_dir, model)
+        create_fmu_skeleton(stage_dir, model, runtime_library=runtime_library)
         with ZipFile(destination, "w", compression=ZIP_DEFLATED) as archive:
             for path in sorted(stage_dir.rglob("*")):
                 if path.is_file():

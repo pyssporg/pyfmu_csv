@@ -96,8 +96,22 @@ std::string extract_attribute(const std::string& tag, const std::string& name) {
 }  // namespace
 
 bool FmuRuntime::load_model_description(std::string_view resource_location) {
-    const std::filesystem::path resources_path(decode_file_uri(resource_location));
-    model_root_ = resources_path.parent_path().string();
+    std::filesystem::path resources_path(decode_file_uri(resource_location));
+    resources_path = resources_path.lexically_normal();
+    if (!resources_path.has_filename()) {
+        resources_path = resources_path.parent_path();
+    }
+
+    if (resources_path.filename() == "resources") {
+        model_root_ = resources_path.parent_path().string();
+    } else if (std::filesystem::exists(resources_path / "modelDescription.xml")) {
+        model_root_ = resources_path.string();
+    } else if (std::filesystem::exists(resources_path.parent_path() / "modelDescription.xml")) {
+        model_root_ = resources_path.parent_path().string();
+    } else {
+        model_root_ = resources_path.parent_path().string();
+    }
+
     model_loaded_ = parse_model_description();
     initialized_ = false;
     output_samples_.clear();
@@ -185,10 +199,14 @@ const std::string& FmuRuntime::last_error() const noexcept {
 }
 
 bool FmuRuntime::parse_model_description() {
-    const auto model_description_path = std::filesystem::path(model_root_) / "modelDescription.xml";
-    const std::string xml = read_text_file(model_description_path);
+    auto model_description_path = std::filesystem::path(model_root_) / "modelDescription.xml";
+    std::string xml = read_text_file(model_description_path);
     if (xml.empty()) {
-        set_error("unable to read modelDescription.xml");
+        model_description_path = std::filesystem::path(model_root_) / "resources" / "modelDescription.xml";
+        xml = read_text_file(model_description_path);
+    }
+    if (xml.empty()) {
+        set_error("unable to read modelDescription.xml at " + model_description_path.string());
         return false;
     }
 

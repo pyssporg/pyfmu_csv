@@ -26,7 +26,9 @@ Responsible for:
 Generated per FMU:
 
 - `modelDescription.xml`
+- `resources/modelDescription.xml`
 - `resources/model.json`
+- platform-specific runtime binary under `binaries/<platform>/`
 - package scaffolding under `binaries/`, `resources/`, and `sources/`
 
 ## Current Repository Layout
@@ -59,4 +61,4 @@ The C++ runtime now provides:
 - FMI 2.0 Co-Simulation C API exports
 - native smoke coverage for both the runtime core and the FMI entrypoints
 
-The remaining integration gap is packaging the compiled shared library into the generated FMU under the required `binaries/<platform>/<modelIdentifier>` path.
+The runtime is packaged into the generated FMU under the required `binaries/<platform>/<modelIdentifier>` path. The remaining work is to broaden FMI coverage beyond the currently implemented CSV-path parameter plus real-output Co-Simulation flow.
