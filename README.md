@@ -5,13 +5,19 @@
 The project uses a hybrid architecture:
 
 - Python is responsible for user-facing packaging and orchestration so the tool can be installed and used easily from `pip`.
-- C++ is responsible for the generated FMU runtime for predictable performance inside the simulation engine.
+- C++ is responsible for the reusable compiled FMU runtime for predictable performance inside the simulation engine.
 
 ## Status
 
 This repository is in the bootstrap phase.
 
-Current work is focused on documenting the intended product, constraints, and workflow before implementing CSV parsing, code generation, and FMU packaging.
+Current work is focused on documenting the intended product, constraints, and workflow before implementing CSV parsing, reusable runtime packaging, and FMU packaging.
+
+The repository now includes an initial scaffold for:
+
+- building and testing the reusable C++ runtime artifact
+- building and testing the Python packaging layer
+- generating a minimal FMU package skeleton for end-to-end assembly work
 
 ## Project Goal
 
@@ -23,7 +29,7 @@ At a high level, the workflow is intended to be:
 
 1. Provide a CSV file containing signal data.
 2. Provide generation options such as model metadata and output mapping.
-3. Generate C++ runtime code that accepts the CSV path as an FMU parameter and loads the signal data during initialization.
+3. Generate per-model FMU metadata and package contents around a reusable compiled C++ runtime.
 4. Package the result as an FMU that can be loaded by tools such as OMSimulator or FMPy.
 
 ## Intended Architecture
@@ -33,16 +39,20 @@ The intended split of responsibilities is:
 - Python package/CLI
   - Validates user inputs
   - Interprets CSV structure and generation options
+  - Generates per-model `modelDescription.xml` and package metadata
   - Creates the FMU package layout
-  - Drives code generation and packaging steps
-- Generated C++ FMU runtime
+  - Packages the reusable runtime with model-specific metadata
+- Reusable compiled C++ FMU runtime
   - Accepts the CSV path as model configuration
   - Loads and validates CSV contents during initialization
+  - Reads variable-reference mapping from `modelDescription.xml`
+  - Resolves variable bindings once during initialization
   - Implements the FMI-facing runtime behavior
   - Produces output values during simulation from in-memory data only
+  - Avoids per-call file access and should minimize hot-path type checking in `get`/`set`
   - Prioritizes performance and portability inside the target engine
 
-This means the project is not "Python instead of C++". Python is the tool users run; C++ is the language used for the generated FMU runtime.
+This means the project is not "Python instead of C++". Python is the tool users run; C++ is the language used for the reusable FMU runtime binary packaged into each generated model.
 
 ## Intended Usage
 
@@ -70,6 +80,59 @@ The exact parameter name and simulator-specific configuration mechanism are not 
 
 The final CLI flags, configuration format, and Python API are not fixed yet. They should be treated as planned behavior, not current functionality.
 
+The preferred design is to avoid rebuilding custom C++ sources for each generated FMU. Model-specific structure should be expressed through generated FMI metadata and package contents, while the compiled runtime remains reusable across models.
+
+## Repository Layout
+
+```text
+.
+├── CMakeLists.txt
+├── pyproject.toml
+├── python/pyfmu_csv/
+├── runtime/
+│   ├── include/pyfmu_csv/runtime/
+│   ├── src/
+│   └── tests/
+├── samples/
+├── templates/fmi2/
+└── tests/
+```
+
+- `runtime/` contains the reusable C++ FMU runtime artifact and its C++ smoke tests
+- `python/pyfmu_csv/` contains the Python package, CLI, and FMU packaging helpers
+- `tests/` contains Python tests for the packaging layer
+- `samples/` contains sample CSV inputs for scaffolding and future tests
+- `templates/fmi2/` is reserved for reusable FMI packaging assets
+
+## Build And Test
+
+Build the reusable runtime:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+Run the C++ smoke tests:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+Run the Python tests:
+
+```bash
+python3 -m pytest tests
+```
+
+Generate a minimal FMU package skeleton:
+
+```bash
+PYTHONPATH=python python3 -m pyfmu_csv.cli create-fmu-skeleton --output build/CsvSignals.fmu --model-name CsvSignals
+```
+
+The generated package skeleton is not yet a runnable FMU. It exists to validate the repository structure, packaging flow, and future assembly steps around `modelDescription.xml`, resources, and runtime binaries.
+
 ## Initial Scope
 
 The first implementation target is:
@@ -77,9 +140,10 @@ The first implementation target is:
 - FMI 2.0
 - Co-Simulation
 - CSV-path-parameter-driven output generation
+- Reusable compiled runtime with per-model XML/package generation
 - Execution in generic simulation engines, with OMSimulator and FMPy as primary validation targets
 
-The first versions are expected to focus on emitting outputs from CSV-defined data rather than solving arbitrary dynamic systems. The FMU runtime should preload the referenced CSV data during initialization and avoid file I/O in the execution loop.
+The first versions are expected to focus on emitting outputs from CSV-defined data rather than solving arbitrary dynamic systems. The FMU runtime should preload the referenced CSV data during initialization, use `modelDescription.xml` for variable-reference mapping, and avoid file I/O in the execution loop.
 
 ## Current Limitations
 
@@ -87,6 +151,7 @@ The following areas are intentionally unresolved or out of scope for the current
 
 - CSV schema is not finalized
 - The exact FMU parameter naming and configuration interface for the CSV path are not finalized
+- The exact internal binding strategy from variable references to in-memory signal data is not finalized
 - Output variable typing and mapping rules are not finalized
 - Time interpolation/extrapolation behavior is not finalized
 - Event handling behavior is not finalized
@@ -99,12 +164,14 @@ The following areas are intentionally unresolved or out of scope for the current
 
 This repository does not yet provide:
 
-- A Python package or CLI
 - CSV parsing logic
-- C++ code generation
-- FMI runtime implementation
+- A full Python packaging workflow
+- A production-ready reusable C++ runtime implementation
+- A production FMI runtime implementation
+- Complete per-model `modelDescription.xml` generation
 - FMU packaging logic
-- Sample FMUs
+- Runtime binary insertion into the generated FMU package
+- Runnable FMUs
 - Automated compatibility tests against OMSimulator or FMPy
 
 ## Development Direction
@@ -113,8 +180,8 @@ The next phases of work are expected to cover:
 
 1. Define the CSV contract and model metadata required for generation.
 2. Establish the Python packaging workflow and project structure.
-3. Implement C++ FMU runtime generation for FMI 2.0 Co-Simulation.
-4. Package valid `.fmu` artifacts.
+3. Implement a reusable C++ FMU runtime for FMI 2.0 Co-Simulation.
+4. Generate per-model `modelDescription.xml` and package valid `.fmu` artifacts without rebuilding the runtime for each model.
 5. Verify generated FMUs in OMSimulator and FMPy.
 
 ## Repository Expectations
@@ -122,6 +189,7 @@ The next phases of work are expected to cover:
 When implementation begins, this repository should remain explicit about the boundary between:
 
 - tooling code that users run directly
-- generated FMU runtime code that runs inside the simulator
+- reusable FMU runtime code that runs inside the simulator
+- per-model XML and package contents generated by the tooling
 
 That split should stay visible in the documentation, build system, and packaging workflow.
