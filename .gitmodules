@@ -1,0 +1,3 @@
+[submodule "3rd_party/fmi_2"]
+	path = 3rd_party/fmi_2
+	url = git@github.com:modelica/fmi-standard.git
