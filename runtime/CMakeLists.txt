@@ -1,6 +1,8 @@
 set(PYFMU_CSV_RUNTIME_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(PYFMU_CSV_FMI_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd_party/fmi_2/headers)
 
+option(PYFMU_CSV_STATIC_STDLIB "Link the FMU shared library with static libstdc++/libgcc when supported" ON)
+
 add_library(pyfmu_csv_runtime_core STATIC
     src/fmu_runtime.cpp
 )
@@ -29,6 +31,12 @@ target_link_libraries(pyfmu_csv_fmi2_cs
 )
 
 target_compile_features(pyfmu_csv_fmi2_cs PUBLIC cxx_std_17)
+
+if(PYFMU_CSV_STATIC_STDLIB)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_options(pyfmu_csv_fmi2_cs PRIVATE -static-libstdc++ -static-libgcc)
+    endif()
+endif()
 
 if(BUILD_TESTING AND PYFMU_CSV_BUILD_TESTS)
     add_executable(pyfmu_csv_runtime_smoke_test
