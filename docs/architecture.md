@@ -53,4 +53,10 @@ Generated per FMU:
 
 ## Current Runtime Status
 
-The C++ runtime target exists as a reusable generic artifact and is covered by a smoke test. It is not yet an FMI-complete shared library and is not yet injected into the generated FMU.
+The C++ runtime now provides:
+
+- a reusable runtime core for CSV loading and interpolation
+- FMI 2.0 Co-Simulation C API exports
+- native smoke coverage for both the runtime core and the FMI entrypoints
+
+The remaining integration gap is packaging the compiled shared library into the generated FMU under the required `binaries/<platform>/<modelIdentifier>` path.

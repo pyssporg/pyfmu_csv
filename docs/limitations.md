@@ -9,10 +9,9 @@
 
 ## FMU Limits
 
-- The generated FMU is packaged for inspection, not execution.
-- The reusable runtime binary is not yet placed in `binaries/<platform>/`.
-- FMI C API functions are not implemented yet.
-- OMSimulator or FMPy simulation execution is not supported yet.
+- The generated FMU does not yet automatically embed the compiled runtime under `binaries/<platform>/`.
+- The implemented FMI runtime currently supports the CSV path string parameter and real outputs only.
+- OMSimulator or FMPy execution from the generated Python-built `.fmu` is not wired up yet because binary packaging is still pending.
 
 ## Scope Limits
 

@@ -12,6 +12,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+This currently covers:
+
+- runtime-core CSV loading and interpolation
+- FMI instantiate/setup/init/doStep/getReal/getString/setString smoke behavior
+
 ### Python unit tests
 
 Covers:

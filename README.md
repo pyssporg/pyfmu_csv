@@ -10,9 +10,11 @@ The current product can:
 - inspect a CSV header and assign FMI value references
 - generate `modelDescription.xml` plus package metadata
 - assemble a zipped `.fmu` artifact
+- build a reusable FMI 2.0 Co-Simulation shared library
+- expose the FMI 2.0 C API for initialization, stepping, and value access
 - validate the generated artifact structurally with FMPy
 
-The generated FMU is not runnable yet because the reusable FMI runtime binary is not packaged yet.
+The reusable runtime is implemented and buildable, but the Python packaging flow does not yet inject the compiled shared library into the generated `.fmu` automatically.
 
 ## Quick Start
 

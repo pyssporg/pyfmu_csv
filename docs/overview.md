@@ -22,9 +22,11 @@ The current implementation provides an initial end-to-end product for packaging:
 - `modelDescription.xml` generation
 - package metadata generation
 - `.fmu` archive assembly
+- reusable FMI 2.0 Co-Simulation runtime implementation
+- FMI 2.0 C API exports for instantiate/init/step/get/set
 - FMPy-based structural validation
 
-The generated FMU is structurally valid for inspection but not yet runnable because the FMI runtime binary is not packaged into the FMU.
+The generated FMU is structurally valid for inspection. The runtime binary exists separately as a native build artifact; automatic insertion into the packaged FMU is still pending.
 
 ## Runtime Contract
 
