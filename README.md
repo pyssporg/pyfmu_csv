@@ -8,6 +8,7 @@
 The current product can:
 
 - inspect a CSV header and assign FMI value references
+- read header type annotations with `Real` fallback
 - generate `modelDescription.xml` plus package metadata
 - assemble a zipped `.fmu` artifact
 - build a reusable FMI 2.0 Co-Simulation shared library
@@ -17,6 +18,13 @@ The current product can:
 - validate the generated artifact structurally with FMPy
 
 The current chain works end to end after the native runtime has been built.
+
+Supported output types today:
+
+- `Real`
+- `Integer`
+- `Boolean`
+- `String`
 
 ## Quick Start
 

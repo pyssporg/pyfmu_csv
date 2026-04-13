@@ -2,17 +2,20 @@
 
 ## Current Functional Limits
 
-- Only CSV header parsing is implemented; signal samples are not consumed yet.
 - The first CSV column must be named `time`.
-- All exported signals are currently emitted as FMI `Real` outputs.
+- Output types are declared through CSV header annotations, with `Real` fallback.
+- Supported output types are `Real`, `Integer`, `Boolean`, and `String`.
 - Value references are assigned sequentially from the CSV column order.
+- `Real` outputs are linearly interpolated.
+- `Integer`, `Boolean`, and `String` outputs are piecewise constant.
 
 ## FMU Limits
 
-- The implemented FMI runtime currently supports the CSV path string parameter and real outputs only.
+- The implemented FMI runtime currently supports the `csv_path` string parameter plus typed outputs only.
 - Model Exchange is not implemented.
 - FMI state serialization and advanced status/query APIs are not implemented.
 - Engine validation is currently centered on FMPy; OMSimulator coverage is still pending.
+- Typed inputs and additional non-`csv_path` parameters are not implemented.
 
 ## Scope Limits
 

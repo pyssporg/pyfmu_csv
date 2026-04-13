@@ -1,17 +1,29 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace pyfmu_csv::runtime {
+
+enum class ValueType {
+    real,
+    integer,
+    boolean,
+    string
+};
+
+using OutputValue = std::variant<double, std::int64_t, bool, std::string>;
 
 struct OutputBinding {
     std::string name;
     std::size_t value_reference {};
     std::size_t csv_column_index {};
+    ValueType value_type {ValueType::real};
 };
 
 struct ModelDescription {
@@ -35,13 +47,17 @@ public:
     void set_time(double time) noexcept;
     double time() const noexcept;
     bool try_get_real(std::size_t value_reference, double& value) const noexcept;
+    bool try_get_integer(std::size_t value_reference, std::int64_t& value) const noexcept;
+    bool try_get_boolean(std::size_t value_reference, bool& value) const noexcept;
+    bool try_get_string(std::size_t value_reference, const std::string*& value) const noexcept;
     bool is_csv_path_reference(std::size_t value_reference) const noexcept;
     const std::string& last_error() const noexcept;
 
 private:
     bool parse_model_description();
     bool load_csv_data();
-    double interpolate_value(std::size_t output_index, double query_time) const noexcept;
+    const OutputValue* value_at_time(std::size_t output_index, double query_time) const noexcept;
+    double interpolate_real_value(std::size_t output_index, double query_time) const noexcept;
     void set_error(std::string message);
 
     std::string model_root_;
@@ -49,7 +65,7 @@ private:
     ModelDescription model_description_;
     std::unordered_map<std::size_t, std::size_t> output_index_by_vr_;
     std::vector<double> time_points_;
-    std::vector<std::vector<double>> output_samples_;
+    std::vector<std::vector<OutputValue>> output_samples_;
     double current_time_ {0.0};
     bool model_loaded_ {false};
     bool initialized_ {false};

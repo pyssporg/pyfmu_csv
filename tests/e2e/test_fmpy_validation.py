@@ -22,7 +22,10 @@ def built_runtime_library() -> Path:
 
 def test_generated_fmu_is_parseable_by_fmpy(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
-    csv_path.write_text("time,temperature,pressure\n0,1,2\n", encoding="utf-8")
+    csv_path.write_text(
+        "time,temperature,count:Integer,enabled:Boolean,mode:String\n0,1,2,true,auto\n",
+        encoding="utf-8",
+    )
     output_fmu = tmp_path / "PlantOutputs.fmu"
 
     package_fmu_from_csv(csv_path, output_fmu, "PlantOutputs", runtime_library=built_runtime_library())
@@ -38,12 +41,19 @@ def test_generated_fmu_is_parseable_by_fmpy(tmp_path) -> None:
     variable_names = [variable.name for variable in model_description.modelVariables]
     assert "csv_path" in variable_names
     assert "temperature" in variable_names
-    assert "pressure" in variable_names
+    assert "count" in variable_names
+    assert "enabled" in variable_names
+    assert "mode" in variable_names
 
 
 def test_generated_fmu_runs_through_fmpy(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
-    csv_path.write_text("time,temperature,pressure\n0.0,10.0,20.0\n1.0,12.0,24.0\n", encoding="utf-8")
+    csv_path.write_text(
+        "time,temperature,count:Integer,enabled:Boolean,mode:String\n"
+        "0.0,10.0,2,true,auto\n"
+        "1.0,12.0,4,false,manual\n",
+        encoding="utf-8",
+    )
     output_fmu = tmp_path / "PlantOutputs.fmu"
 
     package_fmu_from_csv(csv_path, output_fmu, "PlantOutputs", runtime_library=built_runtime_library())
@@ -55,8 +65,9 @@ def test_generated_fmu_runs_through_fmpy(tmp_path) -> None:
         stop_time=1.0,
         output_interval=0.5,
         start_values={"csv_path": str(csv_path)},
-        output=["temperature", "pressure"],
+        output=["temperature", "count", "enabled"],
     )
 
     assert result["temperature"].tolist() == pytest.approx([10.0, 11.0, 12.0])
-    assert result["pressure"].tolist() == pytest.approx([20.0, 22.0, 24.0])
+    assert result["count"].tolist() == [2, 2, 4]
+    assert result["enabled"].tolist() == [True, True, False]

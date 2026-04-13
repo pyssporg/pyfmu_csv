@@ -10,7 +10,7 @@ from pyfmu_csv.csv_model import load_csv_model
 
 def test_create_fmu_skeleton_creates_expected_layout(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
-    csv_path.write_text("time,temperature,pressure\n0,1,2\n", encoding="utf-8")
+    csv_path.write_text("time,temperature,count:Integer,enabled:Boolean,mode:String\n0,1,2,true,auto\n", encoding="utf-8")
     model = load_csv_model(csv_path, "DemoModel")
     output_dir = tmp_path / "DemoModel.fmu"
     runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
@@ -22,6 +22,9 @@ def test_create_fmu_skeleton_creates_expected_layout(tmp_path) -> None:
     assert (output_dir / "resources" / "model.json").is_file()
     manifest = json.loads((output_dir / "resources" / "model.json").read_text(encoding="utf-8"))
     assert manifest["outputs"][0]["name"] == "temperature"
+    assert manifest["outputs"][1]["type"] == "Integer"
+    assert manifest["outputs"][2]["type"] == "Boolean"
+    assert manifest["outputs"][3]["type"] == "String"
     platform_dir, extension = host_platform_tuple()
     runtime_copy = output_dir / "binaries" / platform_dir / f"{model.model_identifier}{extension}"
     assert runtime_copy.is_file()
@@ -30,7 +33,7 @@ def test_create_fmu_skeleton_creates_expected_layout(tmp_path) -> None:
 
 def test_package_fmu_from_csv_writes_archive(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
-    csv_path.write_text("time,temperature\n0,1\n", encoding="utf-8")
+    csv_path.write_text("time,temperature,count:Integer\n0,1,2\n", encoding="utf-8")
     output_fmu = tmp_path / "DemoModel.fmu"
     runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
     runtime_library.write_bytes(b"fake runtime")

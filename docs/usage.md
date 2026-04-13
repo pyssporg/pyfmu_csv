@@ -25,6 +25,14 @@ This command:
 - copies the compiled generic FMI runtime into the FMU
 - writes a zipped `.fmu` archive
 
+Header syntax:
+
+```text
+time,temperature,count:Integer,enabled:Boolean,mode:String
+```
+
+Type annotations are optional. Columns without an annotation default to `Real`.
+
 By default, the generator looks for the compiled runtime at:
 
 ```text
@@ -50,7 +58,7 @@ This prints:
 - model name
 - sanitized FMI model identifier
 - CSV path parameter name
-- exported signals and value references
+- exported signals, value references, and scalar types
 
 ## Create an Unzipped Package Skeleton
 

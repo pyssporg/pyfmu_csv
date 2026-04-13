@@ -3,7 +3,16 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from .model import CsvModelDescription, SignalDefinition
+from .model import CsvModelDescription, SignalDefinition, parse_signal_type
+
+
+def parse_signal_header(column: str) -> SignalDefinition:
+    name_part, separator, type_part = column.partition(":")
+    name = name_part.strip()
+    if not name:
+        raise ValueError("signal names must not be empty")
+    signal_type = parse_signal_type(type_part if separator else None)
+    return SignalDefinition(name=name, value_reference=0, signal_type=signal_type)
 
 
 def load_csv_model(
@@ -28,9 +37,14 @@ def load_csv_model(
     if normalized[0] != "time":
         raise ValueError("The first CSV column must be named 'time'")
 
+    parsed_outputs = [parse_signal_header(column) for column in normalized[1:]]
     outputs = tuple(
-        SignalDefinition(name=column, value_reference=index)
-        for index, column in enumerate(normalized[1:], start=1)
+        SignalDefinition(
+            name=signal.name,
+            value_reference=index,
+            signal_type=signal.signal_type,
+        )
+        for index, signal in enumerate(parsed_outputs, start=1)
     )
 
     if len({signal.name for signal in outputs}) != len(outputs):

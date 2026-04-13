@@ -2,6 +2,7 @@
 
 #include "../../3rd_party/fmi_2/headers/fmi2Functions.h"
 
+#include <cstdint>
 #include <new>
 #include <string>
 
@@ -173,12 +174,36 @@ fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nv
     return fmi2OK;
 }
 
-fmi2Status fmi2GetInteger(fmi2Component, const fmi2ValueReference[], size_t, fmi2Integer[]) {
-    return fmi2Error;
+fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]) {
+    auto* instance = as_instance(c);
+    if (instance == nullptr || vr == nullptr || value == nullptr) {
+        return fmi2Error;
+    }
+
+    for (size_t index = 0; index < nvr; ++index) {
+        std::int64_t integer_value = 0;
+        if (!instance->runtime.try_get_integer(vr[index], integer_value)) {
+            return report_error(instance, "unsupported or unavailable integer value reference");
+        }
+        value[index] = static_cast<fmi2Integer>(integer_value);
+    }
+    return fmi2OK;
 }
 
-fmi2Status fmi2GetBoolean(fmi2Component, const fmi2ValueReference[], size_t, fmi2Boolean[]) {
-    return fmi2Error;
+fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]) {
+    auto* instance = as_instance(c);
+    if (instance == nullptr || vr == nullptr || value == nullptr) {
+        return fmi2Error;
+    }
+
+    for (size_t index = 0; index < nvr; ++index) {
+        bool boolean_value = false;
+        if (!instance->runtime.try_get_boolean(vr[index], boolean_value)) {
+            return report_error(instance, "unsupported or unavailable boolean value reference");
+        }
+        value[index] = boolean_value ? fmi2True : fmi2False;
+    }
+    return fmi2OK;
 }
 
 fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[]) {
@@ -188,10 +213,16 @@ fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t 
     }
 
     for (size_t index = 0; index < nvr; ++index) {
-        if (!instance->runtime.is_csv_path_reference(vr[index])) {
-            return report_error(instance, "unsupported string value reference");
+        if (instance->runtime.is_csv_path_reference(vr[index])) {
+            value[index] = instance->runtime.csv_path().c_str();
+            continue;
         }
-        value[index] = instance->runtime.csv_path().c_str();
+
+        const std::string* string_value = nullptr;
+        if (!instance->runtime.try_get_string(vr[index], string_value) || string_value == nullptr) {
+            return report_error(instance, "unsupported or unavailable string value reference");
+        }
+        value[index] = string_value->c_str();
     }
     return fmi2OK;
 }

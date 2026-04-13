@@ -8,6 +8,9 @@ from uuid import NAMESPACE_URL, uuid5
 
 class SignalType(str, Enum):
     REAL = "Real"
+    INTEGER = "Integer"
+    BOOLEAN = "Boolean"
+    STRING = "String"
 
 
 @dataclass(frozen=True)
@@ -15,6 +18,23 @@ class SignalDefinition:
     name: str
     value_reference: int
     signal_type: SignalType = SignalType.REAL
+
+
+def parse_signal_type(type_name: str | None) -> SignalType:
+    if type_name is None or not type_name.strip():
+        return SignalType.REAL
+
+    normalized = type_name.strip().lower()
+    signal_types = {
+        "real": SignalType.REAL,
+        "integer": SignalType.INTEGER,
+        "boolean": SignalType.BOOLEAN,
+        "string": SignalType.STRING,
+    }
+    if normalized not in signal_types:
+        supported = ", ".join(signal_type.value for signal_type in SignalType)
+        raise ValueError(f"unsupported signal type '{type_name}'. Supported types: {supported}")
+    return signal_types[normalized]
 
 
 @dataclass(frozen=True)

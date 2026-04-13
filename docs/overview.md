@@ -17,6 +17,7 @@ The project has three main parts:
 The current implementation provides an initial end-to-end product for packaging:
 
 - CSV header parsing
+- header type annotation parsing with `Real` fallback
 - output signal discovery
 - FMI value-reference assignment
 - `modelDescription.xml` generation
@@ -39,4 +40,6 @@ The current generated FMU is executable when:
 - The CSV file remains external to the FMU package.
 - The FMU exposes a `csv_path` parameter.
 - The runtime is expected to read the file during initialization only.
-- Execution should use in-memory signal data only.
+- Execution uses in-memory signal data only.
+- `Real` outputs are linearly interpolated.
+- `Integer`, `Boolean`, and `String` outputs are piecewise constant between timestamps.

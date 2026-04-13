@@ -34,7 +34,7 @@ int main() {
     const fs::path csv_path = root / "signals.csv";
     const fs::path model_description_path = root / "modelDescription.xml";
 
-    std::ofstream(csv_path) << "time,temperature,pressure\n0.0,10.0,20.0\n1.0,12.0,24.0\n";
+    std::ofstream(csv_path) << "time,temperature,count,enabled,mode\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
     std::ofstream(model_description_path)
         << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         << "<fmiModelDescription modelName=\"Demo\" fmiVersion=\"2.0\" guid=\"g\" generationTool=\"t\" variableNamingConvention=\"structured\">"
@@ -42,8 +42,10 @@ int main() {
         << "<ModelVariables>"
         << "<ScalarVariable name=\"csv_path\" valueReference=\"0\" variability=\"tunable\" causality=\"parameter\"><String start=\"\"/></ScalarVariable>"
         << "<ScalarVariable name=\"temperature\" valueReference=\"1\" variability=\"continuous\" causality=\"output\"><Real/></ScalarVariable>"
-        << "<ScalarVariable name=\"pressure\" valueReference=\"2\" variability=\"continuous\" causality=\"output\"><Real/></ScalarVariable>"
-        << "</ModelVariables><ModelStructure><Outputs><Unknown index=\"2\"/><Unknown index=\"3\"/></Outputs></ModelStructure></fmiModelDescription>";
+        << "<ScalarVariable name=\"count\" valueReference=\"2\" variability=\"discrete\" causality=\"output\"><Integer/></ScalarVariable>"
+        << "<ScalarVariable name=\"enabled\" valueReference=\"3\" variability=\"discrete\" causality=\"output\"><Boolean/></ScalarVariable>"
+        << "<ScalarVariable name=\"mode\" valueReference=\"4\" variability=\"discrete\" causality=\"output\"><String/></ScalarVariable>"
+        << "</ModelVariables><ModelStructure><Outputs><Unknown index=\"2\"/><Unknown index=\"3\"/><Unknown index=\"4\"/><Unknown index=\"5\"/></Outputs></ModelStructure></fmiModelDescription>";
 
     fmi2CallbackFunctions callbacks {};
     callbacks.logger = logger;
@@ -78,23 +80,50 @@ int main() {
         return fail("expected exitInitializationMode to succeed");
     }
 
-    const fmi2ValueReference output_vrs[] = {1, 2};
-    fmi2Real outputs[] = {0.0, 0.0};
-    if (fmi2GetReal(component, output_vrs, 2, outputs) != fmi2OK) {
+    const fmi2ValueReference real_vr[] = {1};
+    fmi2Real real_output[] = {0.0};
+    if (fmi2GetReal(component, real_vr, 1, real_output) != fmi2OK) {
         return fail("expected getReal to succeed after initialization");
     }
-    if (outputs[0] != 10.0 || outputs[1] != 20.0) {
-        return fail("expected first csv row values at start time");
+    if (real_output[0] != 10.0) {
+        return fail("expected first real csv row value at start time");
+    }
+
+    const fmi2ValueReference integer_vr[] = {2};
+    fmi2Integer integer_output[] = {0};
+    if (fmi2GetInteger(component, integer_vr, 1, integer_output) != fmi2OK || integer_output[0] != 2) {
+        return fail("expected integer getter to succeed");
+    }
+
+    const fmi2ValueReference boolean_vr[] = {3};
+    fmi2Boolean boolean_output[] = {fmi2False};
+    if (fmi2GetBoolean(component, boolean_vr, 1, boolean_output) != fmi2OK || boolean_output[0] != fmi2True) {
+        return fail("expected boolean getter to succeed");
+    }
+
+    const fmi2ValueReference string_vr[] = {4};
+    fmi2String string_output[] = {nullptr};
+    if (fmi2GetString(component, string_vr, 1, string_output) != fmi2OK || std::string(string_output[0]) != "auto") {
+        return fail("expected string getter to succeed");
     }
 
     if (fmi2DoStep(component, 0.0, 0.5, fmi2True) != fmi2OK) {
         return fail("expected doStep to succeed");
     }
-    if (fmi2GetReal(component, output_vrs, 2, outputs) != fmi2OK) {
+    if (fmi2GetReal(component, real_vr, 1, real_output) != fmi2OK) {
         return fail("expected getReal after doStep to succeed");
     }
-    if (outputs[0] != 11.0 || outputs[1] != 22.0) {
-        return fail("expected interpolated values after doStep");
+    if (real_output[0] != 11.0) {
+        return fail("expected interpolated real value after doStep");
+    }
+    if (fmi2GetInteger(component, integer_vr, 1, integer_output) != fmi2OK || integer_output[0] != 2) {
+        return fail("expected piecewise constant integer value after doStep");
+    }
+    if (fmi2GetBoolean(component, boolean_vr, 1, boolean_output) != fmi2OK || boolean_output[0] != fmi2True) {
+        return fail("expected piecewise constant boolean value after doStep");
+    }
+    if (fmi2GetString(component, string_vr, 1, string_output) != fmi2OK || std::string(string_output[0]) != "auto") {
+        return fail("expected piecewise constant string value after doStep");
     }
 
     fmi2FreeInstance(component);

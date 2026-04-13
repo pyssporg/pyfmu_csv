@@ -20,6 +20,8 @@ Responsible for:
 - loading and validating CSV data during initialization
 - resolving variable-reference bindings once
 - serving output values from memory during execution
+- interpolating `Real` outputs
+- applying piecewise-constant semantics for `Integer`, `Boolean`, and `String` outputs
 
 ### Per-model package content
 
@@ -61,4 +63,4 @@ The C++ runtime now provides:
 - FMI 2.0 Co-Simulation C API exports
 - native smoke coverage for both the runtime core and the FMI entrypoints
 
-The runtime is packaged into the generated FMU under the required `binaries/<platform>/<modelIdentifier>` path. The remaining work is to broaden FMI coverage beyond the currently implemented CSV-path parameter plus real-output Co-Simulation flow.
+The runtime is packaged into the generated FMU under the required `binaries/<platform>/<modelIdentifier>` path. The remaining work is to broaden FMI coverage beyond the currently implemented `csv_path` parameter plus typed-output Co-Simulation flow.

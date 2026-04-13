@@ -39,13 +39,14 @@ def build_model_description_xml(model: CsvModelDescription) -> str:
     SubElement(csv_parameter, "String", {"start": ""})
 
     for signal in model.outputs:
+        variability = "continuous" if signal.signal_type.value == "Real" else "discrete"
         variable = SubElement(
             model_variables,
             "ScalarVariable",
             {
                 "name": signal.name,
                 "valueReference": str(signal.value_reference),
-                "variability": "continuous",
+                "variability": variability,
                 "causality": "output",
             },
         )
