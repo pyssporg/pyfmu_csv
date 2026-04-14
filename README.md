@@ -39,13 +39,35 @@ ctest --test-dir build --output-on-failure
 Run the Python tests:
 
 ```bash
-./venv/bin/python -m pytest tests
+python -m pytest tests
+```
+
+Install the Python package to register the `pyfmu-csv` CLI from `[project.scripts]`:
+
+```bash
+pip install -e .
 ```
 
 Generate an FMU from a CSV file:
 
 ```bash
-PYTHONPATH=python ./venv/bin/python -m pyfmu_csv generate-fmu \
+pyfmu-csv generate-fmu \
+  --input-csv samples/signals.csv \
+  --output build/CsvSignals.fmu \
+  --model-name CsvSignals
+```
+
+This console command is provided by:
+
+```toml
+[project.scripts]
+pyfmu-csv = "pyfmu_csv.cli:main"
+```
+
+If you prefer not to install the package, the module form remains available:
+
+```bash
+python -m pyfmu_csv generate-fmu \
   --input-csv samples/signals.csv \
   --output build/CsvSignals.fmu \
   --model-name CsvSignals
@@ -54,7 +76,7 @@ PYTHONPATH=python ./venv/bin/python -m pyfmu_csv generate-fmu \
 Inspect the CSV-to-VR mapping:
 
 ```bash
-PYTHONPATH=python ./venv/bin/python -m pyfmu_csv inspect-csv \
+pyfmu-csv inspect-csv \
   --input-csv samples/signals.csv \
   --model-name CsvSignals
 ```

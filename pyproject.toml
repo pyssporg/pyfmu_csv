@@ -7,7 +7,7 @@ name = "pyfmu-csv"
 version = "0.1.0"
 description = "Tooling for packaging CSV-driven FMI 2.0 Co-Simulation FMUs."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
   { name = "pyfmu_csv contributors" }

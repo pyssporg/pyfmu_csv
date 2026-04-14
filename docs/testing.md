@@ -27,7 +27,7 @@ Covers:
 - model description generation
 
 ```bash
-./venv/bin/python -m pytest tests/unit
+pytest tests/unit
 ```
 
 ### Python integration tests
@@ -40,7 +40,7 @@ Covers:
 - CLI command behavior
 
 ```bash
-./venv/bin/python -m pytest tests/integration
+pytest tests/integration
 ```
 
 ### End-to-end validation
@@ -53,11 +53,11 @@ Covers:
 - mixed-type output behavior for `Real`, `Integer`, and `Boolean`
 
 ```bash
-./venv/bin/python -m pytest tests/e2e
+pytest tests/e2e
 ```
 
 ### Full Python suite
 
 ```bash
-./venv/bin/python -m pytest tests
+pytest tests
 ```
