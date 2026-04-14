@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 IMAGE_TAG="${PYFMU_CSV_CONTAINER_IMAGE:-pyfmu-csv-build:ubuntu22-gcc13}"
-CONTAINERFILE="${REPO_ROOT}/containers/build/Containerfile"
+CONTAINERFILE="containers/build/Containerfile"
 BUILD_ARGS=()
 
 for name in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY; do
@@ -13,8 +13,15 @@ for name in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY; do
   fi
 done
 
+cd "${REPO_ROOT}"
+
+if [[ ! -f "${CONTAINERFILE}" ]]; then
+  echo "missing container definition: ${REPO_ROOT}/${CONTAINERFILE}" >&2
+  exit 1
+fi
+
 podman build \
   "${BUILD_ARGS[@]}" \
   --tag "${IMAGE_TAG}" \
   --file "${CONTAINERFILE}" \
-  "${REPO_ROOT}"
+  .
