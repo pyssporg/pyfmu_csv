@@ -87,11 +87,21 @@ By default, the generator looks for the compiled runtime at:
 build/runtime/libpyfmu_csv_fmi2_cs.so
 ```
 
+Runtime lookup order is:
+
+1. `--runtime-library`
+2. a runtime bundled into an installed wheel
+3. `build/runtime/libpyfmu_csv_fmi2_cs.*`
+
 You can override that with:
 
 ```bash
 --runtime-library /path/to/shared/library
 ```
+
+Wheel builds can bundle the native runtime if it has already been compiled into
+`build/runtime/`. Editable and source installs do not build the runtime during
+`pip install`.
 
 ## Inspect a CSV Contract
 

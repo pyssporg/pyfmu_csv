@@ -61,6 +61,11 @@ Install the Python package to register the `pyfmu-csv` CLI from `[project.script
 pip install -e .
 ```
 
+Built wheels can bundle the native runtime when `build/runtime/libpyfmu_csv_fmi2_cs*`
+already exists. Editable and source installs remain Python-only and will use either a
+bundled wheel runtime, an explicit `--runtime-library`, or a local `build/runtime`
+artifact at FMU generation time.
+
 Generate an FMU from a CSV file:
 
 ```bash

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import platform
 import shutil
+from importlib import resources
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from textwrap import dedent
@@ -27,10 +28,42 @@ def host_platform_tuple() -> tuple[str, str]:
     raise RuntimeError(f"unsupported host platform: {system}/{machine}")
 
 
+def runtime_library_filename() -> str:
+    _, extension = host_platform_tuple()
+    return f"libpyfmu_csv_fmi2_cs{extension}"
+
+
 def default_runtime_library_path(project_root: str | Path | None = None) -> Path:
     root = Path(project_root) if project_root is not None else Path(__file__).resolve().parents[2]
-    _, extension = host_platform_tuple()
-    return root / "build" / "runtime" / f"libpyfmu_csv_fmi2_cs{extension}"
+    return root / "build" / "runtime" / runtime_library_filename()
+
+
+def bundled_runtime_library() -> Path | None:
+    candidate = resources.files("pyfmu_csv").joinpath("_runtime", runtime_library_filename())
+    if candidate.is_file():
+        return Path(candidate)
+    return None
+
+
+def resolve_runtime_library_path(runtime_library: str | Path | None = None) -> Path:
+    if runtime_library is not None:
+        source = Path(runtime_library)
+        if source.is_file():
+            return source
+        raise FileNotFoundError(f"runtime library does not exist: {source}")
+
+    bundled = bundled_runtime_library()
+    if bundled is not None:
+        return bundled
+
+    local = default_runtime_library_path()
+    if local.is_file():
+        return local
+
+    raise FileNotFoundError(
+        "runtime library not found. Build the native runtime, install a wheel that bundles it, "
+        "or pass --runtime-library."
+    )
 
 
 def install_runtime_binary(
@@ -39,11 +72,7 @@ def install_runtime_binary(
     runtime_library: str | Path | None,
 ) -> Path:
     platform_dir, extension = host_platform_tuple()
-    source = Path(runtime_library) if runtime_library is not None else default_runtime_library_path()
-    if not source.is_file():
-        raise FileNotFoundError(
-            f"runtime library does not exist: {source}. Build the native runtime before packaging the FMU."
-        )
+    source = resolve_runtime_library_path(runtime_library)
 
     binary_dir = root / "binaries" / platform_dir
     binary_dir.mkdir(parents=True, exist_ok=True)
