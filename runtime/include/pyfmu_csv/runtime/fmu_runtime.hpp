@@ -50,6 +50,7 @@ private:
     void clear_loaded_data();
     bool load_csv_data();
     bool parse_header(const std::vector<std::string>& header);
+    const OutputBinding* binding_for(std::size_t value_reference) const noexcept;
     bool has_valid_access(std::size_t value_reference, ValueType expected_type) const noexcept;
     const std::vector<OutputValue>* values_at(std::size_t value_reference) const noexcept;
     std::size_t sample_index_at(double query_time) const noexcept;

@@ -4,7 +4,9 @@ set(PYFMU_CSV_FMI_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd_party/fmi_2/headers)
 option(PYFMU_CSV_STATIC_STDLIB "Link the FMU shared library with static libstdc++/libgcc when supported" ON)
 
 add_library(pyfmu_csv_runtime_core STATIC
-    src/fmu_runtime.cpp
+    src/fmu_runtime_core.cpp
+    src/fmu_runtime_csv.cpp
+    src/fmu_runtime_values.cpp
 )
 
 target_include_directories(pyfmu_csv_runtime_core
