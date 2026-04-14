@@ -27,10 +27,11 @@ exec podman run \
     if [[ -n "${https_proxy-}${HTTPS_PROXY-}" ]]; then
       pip_args+=(--trusted-host pypi.org --trusted-host files.pythonhosted.org)
     fi
-    python -m pip install "${pip_args[@]}" --upgrade pip setuptools wheel
+    python -m pip install "${pip_args[@]}" --upgrade pip setuptools wheel build
     python -m pip install "${pip_args[@]}" --no-build-isolation -e ".[dev]"
     cmake -S . -B build -G Ninja
     cmake --build build
     ctest --test-dir build --output-on-failure
     python -m pytest tests
+    python -m build --wheel
   '
