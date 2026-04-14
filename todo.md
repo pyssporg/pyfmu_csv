@@ -1,4 +1,4 @@
 
 
-The generic runtime should not parse the model description
-Instead: set up vector<vector<type>> allocations for a large number of vr ( eg 1000) and do null checks for faulty accesses
+Package original csv in the fmu
+use as fallback when no csv path is provided

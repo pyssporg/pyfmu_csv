@@ -2,6 +2,22 @@
 
 ## Test Levels
 
+## Containerized Path
+
+For the canonical Ubuntu 22.04 / GCC 13 environment, use the Podman helper
+scripts from the repository root:
+
+```bash
+./scripts/build_container.sh
+./scripts/container_build.sh
+```
+
+To inspect or debug the environment interactively:
+
+```bash
+./scripts/container_shell.sh
+```
+
 ### Runtime smoke tests
 
 Covers the reusable C++ artifact:

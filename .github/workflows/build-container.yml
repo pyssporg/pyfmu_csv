@@ -1,0 +1,27 @@
+name: Build Container
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Show Podman version
+        run: podman --version
+
+      - name: Build build-container image
+        run: ./scripts/build_container.sh
+
+      - name: Run build and test pipeline in container
+        run: ./scripts/container_build.sh

@@ -6,6 +6,31 @@
 - `pytest` for Python tests
 - `fmpy` for structural FMU inspection
 - `cmake` plus a C++ compiler for the reusable runtime artifact
+- `podman` for the reproducible Ubuntu 22.04 / GCC 13 build container
+
+## Podman Build Container
+
+Build the local image:
+
+```bash
+./scripts/build_container.sh
+```
+
+Run the full build and test pipeline inside the container:
+
+```bash
+./scripts/container_build.sh
+```
+
+Open an interactive shell in the same containerized environment:
+
+```bash
+./scripts/container_shell.sh
+```
+
+The helper scripts mount the repository into `/workspace` and use the
+`containers/build/Containerfile` definition as the single source of truth for
+the build environment.
 
 ## Install the CLI
 
@@ -101,4 +126,10 @@ cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 pytest tests
+```
+
+The equivalent containerized path is:
+
+```bash
+./scripts/container_build.sh
 ```

@@ -42,6 +42,19 @@ Run the Python tests:
 python -m pytest tests
 ```
 
+Use the Podman-based build container for a reproducible Ubuntu 22.04 / GCC 13 environment:
+
+```bash
+./scripts/build_container.sh
+./scripts/container_build.sh
+```
+
+Open an interactive shell inside the same container:
+
+```bash
+./scripts/container_shell.sh
+```
+
 Install the Python package to register the `pyfmu-csv` CLI from `[project.scripts]`:
 
 ```bash
