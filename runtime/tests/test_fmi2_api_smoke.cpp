@@ -32,20 +32,8 @@ int main() {
     namespace fs = std::filesystem;
     const fs::path root = create_fixture_root();
     const fs::path csv_path = root / "signals.csv";
-    const fs::path model_description_path = root / "modelDescription.xml";
 
-    std::ofstream(csv_path) << "time,temperature,count,enabled,mode\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
-    std::ofstream(model_description_path)
-        << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        << "<fmiModelDescription modelName=\"Demo\" fmiVersion=\"2.0\" guid=\"g\" generationTool=\"t\" variableNamingConvention=\"structured\">"
-        << "<CoSimulation modelIdentifier=\"Demo\" canHandleVariableCommunicationStepSize=\"true\"/>"
-        << "<ModelVariables>"
-        << "<ScalarVariable name=\"csv_path\" valueReference=\"0\" variability=\"tunable\" causality=\"parameter\"><String start=\"\"/></ScalarVariable>"
-        << "<ScalarVariable name=\"temperature\" valueReference=\"1\" variability=\"continuous\" causality=\"output\"><Real/></ScalarVariable>"
-        << "<ScalarVariable name=\"count\" valueReference=\"2\" variability=\"discrete\" causality=\"output\"><Integer/></ScalarVariable>"
-        << "<ScalarVariable name=\"enabled\" valueReference=\"3\" variability=\"discrete\" causality=\"output\"><Boolean/></ScalarVariable>"
-        << "<ScalarVariable name=\"mode\" valueReference=\"4\" variability=\"discrete\" causality=\"output\"><String/></ScalarVariable>"
-        << "</ModelVariables><ModelStructure><Outputs><Unknown index=\"2\"/><Unknown index=\"3\"/><Unknown index=\"4\"/><Unknown index=\"5\"/></Outputs></ModelStructure></fmiModelDescription>";
+    std::ofstream(csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
 
     fmi2CallbackFunctions callbacks {};
     callbacks.logger = logger;
@@ -63,6 +51,12 @@ int main() {
 
     if (component == nullptr) {
         return fail("expected instantiate to succeed");
+    }
+
+    const fmi2ValueReference pre_init_real_vr[] = {1};
+    fmi2Real pre_init_real_output[] = {0.0};
+    if (fmi2GetReal(component, pre_init_real_vr, 1, pre_init_real_output) == fmi2OK) {
+        return fail("expected getReal before initialization to fail");
     }
 
     const fmi2ValueReference csv_vr[] = {0};
@@ -105,6 +99,16 @@ int main() {
     fmi2String string_output[] = {nullptr};
     if (fmi2GetString(component, string_vr, 1, string_output) != fmi2OK || std::string(string_output[0]) != "auto") {
         return fail("expected string getter to succeed");
+    }
+
+    const fmi2ValueReference wrong_type_vr[] = {2};
+    if (fmi2GetReal(component, wrong_type_vr, 1, real_output) == fmi2OK) {
+        return fail("expected wrong-type getReal to fail");
+    }
+
+    const fmi2ValueReference out_of_range_vr[] = {1000};
+    if (fmi2GetReal(component, out_of_range_vr, 1, real_output) == fmi2OK) {
+        return fail("expected out-of-range getReal to fail");
     }
 
     if (fmi2DoStep(component, 0.0, 0.5, fmi2True) != fmi2OK) {

@@ -31,24 +31,12 @@ int main() {
 
     const fs::path root = create_fixture_root("pyfmu_csv_runtime_smoke");
     const fs::path csv_path = root / "signals.csv";
-    const fs::path model_description_path = root / "modelDescription.xml";
 
-    std::ofstream(csv_path) << "time,temperature,count,enabled,mode\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
-    std::ofstream(model_description_path)
-        << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        << "<fmiModelDescription modelName=\"Demo\" fmiVersion=\"2.0\" guid=\"g\" generationTool=\"t\" variableNamingConvention=\"structured\">"
-        << "<CoSimulation modelIdentifier=\"Demo\"/>"
-        << "<ModelVariables>"
-        << "<ScalarVariable name=\"csv_path\" valueReference=\"0\" variability=\"tunable\" causality=\"parameter\"><String start=\"\"/></ScalarVariable>"
-        << "<ScalarVariable name=\"temperature\" valueReference=\"1\" variability=\"continuous\" causality=\"output\"><Real/></ScalarVariable>"
-        << "<ScalarVariable name=\"count\" valueReference=\"2\" variability=\"discrete\" causality=\"output\"><Integer/></ScalarVariable>"
-        << "<ScalarVariable name=\"enabled\" valueReference=\"3\" variability=\"discrete\" causality=\"output\"><Boolean/></ScalarVariable>"
-        << "<ScalarVariable name=\"mode\" valueReference=\"4\" variability=\"discrete\" causality=\"output\"><String/></ScalarVariable>"
-        << "</ModelVariables><ModelStructure/></fmiModelDescription>";
+    std::ofstream(csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
 
     FmuRuntime runtime;
-    if (!runtime.load_model_description(to_file_uri(root / "resources"))) {
-        return fail("expected model description loading to succeed");
+    if (!runtime.load_resource_location(to_file_uri(root / "resources"))) {
+        return fail("expected resource location loading to succeed");
     }
     if (!runtime.set_csv_path(csv_path.string())) {
         return fail("expected csv path assignment to succeed");
@@ -60,7 +48,7 @@ int main() {
         return fail("runtime should report initialized state");
     }
     if (runtime.binding_count() != 4) {
-        return fail("runtime should expose output bindings from the xml");
+        return fail("runtime should expose output bindings from the csv header");
     }
 
     runtime.set_time(0.5);
@@ -82,6 +70,17 @@ int main() {
     const std::string* string_value = nullptr;
     if (!runtime.try_get_string(4, string_value) || string_value == nullptr || *string_value != "auto") {
         return fail("expected piecewise constant string value");
+    }
+    if (runtime.try_get_real(1000, real_value)) {
+        return fail("expected out-of-range real lookup to fail");
+    }
+    if (runtime.try_get_real(2, real_value)) {
+        return fail("expected wrong-type real lookup to fail");
+    }
+
+    runtime.reset();
+    if (runtime.try_get_real(1, real_value)) {
+        return fail("expected real lookup after reset to fail");
     }
 
     return EXIT_SUCCESS;

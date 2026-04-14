@@ -84,8 +84,8 @@ fmi2Component fmi2Instantiate(
     instance->instance_name = instanceName != nullptr ? instanceName : "pyfmu_csv";
     instance->logging_on = loggingOn == fmi2True;
 
-    if (fmuResourceLocation == nullptr || !instance->runtime.load_model_description(fmuResourceLocation)) {
-        report_error(instance, instance->runtime.last_error().empty() ? "unable to load model description" : instance->runtime.last_error());
+    if (fmuResourceLocation != nullptr && !instance->runtime.load_resource_location(fmuResourceLocation)) {
+        report_error(instance, instance->runtime.last_error().empty() ? "unable to load FMU resources" : instance->runtime.last_error());
         delete instance;
         return nullptr;
     }

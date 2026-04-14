@@ -4,13 +4,13 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
 namespace pyfmu_csv::runtime {
 
 enum class ValueType {
+    none,
     real,
     integer,
     boolean,
@@ -22,19 +22,12 @@ using OutputValue = std::variant<double, std::int64_t, bool, std::string>;
 struct OutputBinding {
     std::string name;
     std::size_t value_reference {};
-    std::size_t csv_column_index {};
-    ValueType value_type {ValueType::real};
-};
-
-struct ModelDescription {
-    std::string model_name;
-    std::string csv_path_parameter_name {"csv_path"};
-    std::vector<OutputBinding> outputs;
+    ValueType value_type {ValueType::none};
 };
 
 class FmuRuntime {
 public:
-    bool load_model_description(std::string_view resource_location);
+    bool load_resource_location(std::string_view resource_location);
     bool set_csv_path(std::string csv_path);
     bool initialize();
     void reset();
@@ -54,20 +47,21 @@ public:
     const std::string& last_error() const noexcept;
 
 private:
-    bool parse_model_description();
+    void clear_loaded_data();
     bool load_csv_data();
-    const OutputValue* value_at_time(std::size_t output_index, double query_time) const noexcept;
-    double interpolate_real_value(std::size_t output_index, double query_time) const noexcept;
+    bool parse_header(const std::vector<std::string>& header);
+    bool has_valid_access(std::size_t value_reference, ValueType expected_type) const noexcept;
+    const std::vector<OutputValue>* values_at(std::size_t value_reference) const noexcept;
+    std::size_t sample_index_at(double query_time) const noexcept;
+    double interpolate_real_value(std::size_t value_reference, double query_time) const noexcept;
     void set_error(std::string message);
 
-    std::string model_root_;
+    std::string resource_root_;
     std::string csv_path_;
-    ModelDescription model_description_;
-    std::unordered_map<std::size_t, std::size_t> output_index_by_vr_;
-    std::vector<double> time_points_;
+    std::vector<OutputBinding> bindings_;
     std::vector<std::vector<OutputValue>> output_samples_;
+    std::vector<double> time_points_;
     double current_time_ {0.0};
-    bool model_loaded_ {false};
     bool initialized_ {false};
     std::string last_error_;
 };

@@ -4,9 +4,9 @@
 #include <charconv>
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -41,11 +41,30 @@ std::string logical_signal_name(const std::string& header) {
     return trim(header.substr(0, separator));
 }
 
-bool parse_size_t(const std::string& text, std::size_t& value) {
-    const char* begin = text.data();
-    const char* end = text.data() + text.size();
-    auto result = std::from_chars(begin, end, value);
-    return result.ec == std::errc {} && result.ptr == end;
+ValueType parse_header_value_type(const std::string& header) {
+    const auto separator = header.find(':');
+    if (separator == std::string::npos) {
+        return ValueType::real;
+    }
+
+    std::string type_name = trim(header.substr(separator + 1));
+    std::transform(type_name.begin(), type_name.end(), type_name.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+
+    if (type_name.empty() || type_name == "real") {
+        return ValueType::real;
+    }
+    if (type_name == "integer") {
+        return ValueType::integer;
+    }
+    if (type_name == "boolean") {
+        return ValueType::boolean;
+    }
+    if (type_name == "string") {
+        return ValueType::string;
+    }
+    return ValueType::none;
 }
 
 bool parse_double(const std::string& text, double& value) {
@@ -106,73 +125,20 @@ std::string decode_file_uri(std::string_view location) {
     return decoded;
 }
 
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream stream(path);
-    if (!stream) {
-        return {};
-    }
-    return std::string(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-}
-
-std::string extract_attribute(const std::string& tag, const std::string& name) {
-    const std::string key = name + "=\"";
-    const auto start = tag.find(key);
-    if (start == std::string::npos) {
-        return {};
-    }
-    const auto value_start = start + key.size();
-    const auto value_end = tag.find('"', value_start);
-    if (value_end == std::string::npos) {
-        return {};
-    }
-    return tag.substr(value_start, value_end - value_start);
-}
-
-ValueType detect_value_type(const std::string& body) {
-    if (body.find("<Real") != std::string::npos) {
-        return ValueType::real;
-    }
-    if (body.find("<Integer") != std::string::npos) {
-        return ValueType::integer;
-    }
-    if (body.find("<Boolean") != std::string::npos) {
-        return ValueType::boolean;
-    }
-    return ValueType::string;
-}
-
 }  // namespace
 
-bool FmuRuntime::load_model_description(std::string_view resource_location) {
+bool FmuRuntime::load_resource_location(std::string_view resource_location) {
     std::filesystem::path resources_path(decode_file_uri(resource_location));
     resources_path = resources_path.lexically_normal();
-    if (!resources_path.has_filename()) {
-        resources_path = resources_path.parent_path();
-    }
-
-    if (resources_path.filename() == "resources") {
-        model_root_ = resources_path.parent_path().string();
-    } else if (std::filesystem::exists(resources_path / "modelDescription.xml")) {
-        model_root_ = resources_path.string();
-    } else if (std::filesystem::exists(resources_path.parent_path() / "modelDescription.xml")) {
-        model_root_ = resources_path.parent_path().string();
+    if (!resources_path.empty()) {
+        resource_root_ = resources_path.string();
     } else {
-        model_root_ = resources_path.parent_path().string();
+        resource_root_.clear();
     }
 
-    model_loaded_ = parse_model_description();
     initialized_ = false;
-    output_samples_.clear();
-    time_points_.clear();
-    output_index_by_vr_.clear();
-
-    if (!model_loaded_) {
-        return false;
-    }
-
-    for (std::size_t index = 0; index < model_description_.outputs.size(); ++index) {
-        output_index_by_vr_.emplace(model_description_.outputs[index].value_reference, index);
-    }
+    clear_loaded_data();
+    last_error_.clear();
     return true;
 }
 
@@ -182,11 +148,6 @@ bool FmuRuntime::set_csv_path(std::string csv_path) {
 }
 
 bool FmuRuntime::initialize() {
-    if (!model_loaded_) {
-        set_error("modelDescription.xml has not been loaded");
-        initialized_ = false;
-        return false;
-    }
     if (csv_path_.empty()) {
         set_error("csv_path parameter must be set before initialization");
         initialized_ = false;
@@ -198,8 +159,7 @@ bool FmuRuntime::initialize() {
 
 void FmuRuntime::reset() {
     csv_path_.clear();
-    time_points_.clear();
-    output_samples_.clear();
+    clear_loaded_data();
     current_time_ = 0.0;
     initialized_ = false;
     last_error_.clear();
@@ -214,11 +174,11 @@ const std::string& FmuRuntime::csv_path() const noexcept {
 }
 
 std::size_t FmuRuntime::binding_count() const noexcept {
-    return model_description_.outputs.size();
+    return bindings_.size();
 }
 
 const std::vector<OutputBinding>& FmuRuntime::bindings() const noexcept {
-    return model_description_.outputs;
+    return bindings_;
 }
 
 void FmuRuntime::set_time(double time) noexcept {
@@ -230,62 +190,46 @@ double FmuRuntime::time() const noexcept {
 }
 
 bool FmuRuntime::try_get_real(std::size_t value_reference, double& value) const noexcept {
-    const auto match = output_index_by_vr_.find(value_reference);
-    if (!initialized_ || match == output_index_by_vr_.end()) {
+    if (!has_valid_access(value_reference, ValueType::real)) {
         return false;
     }
-    if (model_description_.outputs[match->second].value_type != ValueType::real) {
-        return false;
-    }
-    value = interpolate_real_value(match->second, current_time_);
+    value = interpolate_real_value(value_reference, current_time_);
     return true;
 }
 
 bool FmuRuntime::try_get_integer(std::size_t value_reference, std::int64_t& value) const noexcept {
-    const auto match = output_index_by_vr_.find(value_reference);
-    if (!initialized_ || match == output_index_by_vr_.end()) {
+    if (!has_valid_access(value_reference, ValueType::integer)) {
         return false;
     }
-    if (model_description_.outputs[match->second].value_type != ValueType::integer) {
+    const auto* samples = values_at(value_reference);
+    if (samples == nullptr || samples->empty()) {
         return false;
     }
-    const OutputValue* sample = value_at_time(match->second, current_time_);
-    if (sample == nullptr) {
-        return false;
-    }
-    value = std::get<std::int64_t>(*sample);
+    value = std::get<std::int64_t>((*samples)[sample_index_at(current_time_)]);
     return true;
 }
 
 bool FmuRuntime::try_get_boolean(std::size_t value_reference, bool& value) const noexcept {
-    const auto match = output_index_by_vr_.find(value_reference);
-    if (!initialized_ || match == output_index_by_vr_.end()) {
+    if (!has_valid_access(value_reference, ValueType::boolean)) {
         return false;
     }
-    if (model_description_.outputs[match->second].value_type != ValueType::boolean) {
+    const auto* samples = values_at(value_reference);
+    if (samples == nullptr || samples->empty()) {
         return false;
     }
-    const OutputValue* sample = value_at_time(match->second, current_time_);
-    if (sample == nullptr) {
-        return false;
-    }
-    value = std::get<bool>(*sample);
+    value = std::get<bool>((*samples)[sample_index_at(current_time_)]);
     return true;
 }
 
 bool FmuRuntime::try_get_string(std::size_t value_reference, const std::string*& value) const noexcept {
-    const auto match = output_index_by_vr_.find(value_reference);
-    if (!initialized_ || match == output_index_by_vr_.end()) {
+    if (!has_valid_access(value_reference, ValueType::string)) {
         return false;
     }
-    if (model_description_.outputs[match->second].value_type != ValueType::string) {
+    const auto* samples = values_at(value_reference);
+    if (samples == nullptr || samples->empty()) {
         return false;
     }
-    const OutputValue* sample = value_at_time(match->second, current_time_);
-    if (sample == nullptr) {
-        return false;
-    }
-    value = &std::get<std::string>(*sample);
+    value = &std::get<std::string>((*samples)[sample_index_at(current_time_)]);
     return true;
 }
 
@@ -297,72 +241,60 @@ const std::string& FmuRuntime::last_error() const noexcept {
     return last_error_;
 }
 
-bool FmuRuntime::parse_model_description() {
-    auto model_description_path = std::filesystem::path(model_root_) / "modelDescription.xml";
-    std::string xml = read_text_file(model_description_path);
-    if (xml.empty()) {
-        model_description_path = std::filesystem::path(model_root_) / "resources" / "modelDescription.xml";
-        xml = read_text_file(model_description_path);
-    }
-    if (xml.empty()) {
-        set_error("unable to read modelDescription.xml at " + model_description_path.string());
+void FmuRuntime::clear_loaded_data() {
+    bindings_.clear();
+    output_samples_.clear();
+    time_points_.clear();
+}
+
+bool FmuRuntime::parse_header(const std::vector<std::string>& header) {
+    if (header.size() < 2 || logical_signal_name(header.front()) != "time") {
+        set_error("csv header must start with a time column");
         return false;
     }
 
-    model_description_ = {};
+    clear_loaded_data();
+    output_samples_.resize(header.size());
+    bindings_.reserve(header.size() - 1);
 
-    const auto root_pos = xml.find("<fmiModelDescription");
-    if (root_pos == std::string::npos) {
-        set_error("missing fmiModelDescription root element");
-        return false;
-    }
-    const auto root_end = xml.find('>', root_pos);
-    if (root_end == std::string::npos) {
-        set_error("malformed fmiModelDescription root element");
-        return false;
-    }
-    model_description_.model_name = extract_attribute(xml.substr(root_pos, root_end - root_pos + 1), "modelName");
-
-    std::size_t search_from = 0;
-    while (true) {
-        const auto scalar_start = xml.find("<ScalarVariable", search_from);
-        if (scalar_start == std::string::npos) {
-            break;
-        }
-        const auto scalar_end = xml.find('>', scalar_start);
-        const auto close_tag = xml.find("</ScalarVariable>", scalar_end);
-        if (scalar_end == std::string::npos || close_tag == std::string::npos) {
-            set_error("malformed ScalarVariable element");
+    for (std::size_t index = 1; index < header.size(); ++index) {
+        const std::size_t vr = index;
+        const std::string name = logical_signal_name(header[index]);
+        if (name.empty()) {
+            set_error("signal names must not be empty");
             return false;
         }
 
-        const std::string tag = xml.substr(scalar_start, scalar_end - scalar_start + 1);
-        const std::string body = xml.substr(scalar_end + 1, close_tag - scalar_end - 1);
-        const std::string causality = extract_attribute(tag, "causality");
-        const std::string name = extract_attribute(tag, "name");
-        const std::string value_reference_text = extract_attribute(tag, "valueReference");
-
-        std::size_t value_reference = 0;
-        if (!value_reference_text.empty() && !parse_size_t(value_reference_text, value_reference)) {
-            set_error("invalid valueReference in modelDescription.xml");
+        const ValueType value_type = parse_header_value_type(header[index]);
+        if (value_type == ValueType::none) {
+            set_error("unsupported signal type in csv header");
             return false;
         }
 
-        if (causality == "parameter" && body.find("<String") != std::string::npos) {
-            model_description_.csv_path_parameter_name = name;
-        } else if (causality == "output") {
-            model_description_.outputs.push_back(OutputBinding {name, value_reference, 0, detect_value_type(body)});
-        }
-
-        search_from = close_tag + std::string("</ScalarVariable>").size();
-    }
-
-    if (model_description_.outputs.empty()) {
-        set_error("no supported output variables found in modelDescription.xml");
-        return false;
+        bindings_.push_back(OutputBinding {name, vr, value_type});
     }
 
     return true;
+}
+
+bool FmuRuntime::has_valid_access(std::size_t value_reference, ValueType expected_type) const noexcept {
+    if (!initialized_) {
+        return false;
+    }
+    // TODO: Non loop solution
+    for (const auto& binding : bindings_) {
+        if (binding.value_reference == value_reference) {
+            return binding.value_type == expected_type;
+        }
+    }
+    return false;
+}
+
+const std::vector<OutputValue>* FmuRuntime::values_at(std::size_t value_reference) const noexcept {
+    if (value_reference >= output_samples_.size()) {
+        return nullptr;
+    }
+    return &output_samples_[value_reference];
 }
 
 bool FmuRuntime::load_csv_data() {
@@ -379,27 +311,9 @@ bool FmuRuntime::load_csv_data() {
     }
 
     const std::vector<std::string> header = split_csv_line(line);
-    if (header.size() < 2 || logical_signal_name(header.front()) != "time") {
-        set_error("csv header must start with a time column");
+    if (!parse_header(header)) {
         return false;
     }
-
-    std::unordered_map<std::string, std::size_t> column_indices;
-    for (std::size_t index = 0; index < header.size(); ++index) {
-        column_indices.emplace(logical_signal_name(header[index]), index);
-    }
-
-    for (auto& output : model_description_.outputs) {
-        const auto match = column_indices.find(output.name);
-        if (match == column_indices.end()) {
-            set_error("csv file is missing an output column from modelDescription.xml");
-            return false;
-        }
-        output.csv_column_index = match->second;
-    }
-
-    time_points_.clear();
-    output_samples_.assign(model_description_.outputs.size(), {});
 
     while (std::getline(stream, line)) {
         if (trim(line).empty()) {
@@ -418,17 +332,16 @@ bool FmuRuntime::load_csv_data() {
         }
         time_points_.push_back(time_value);
 
-        for (std::size_t output_index = 0; output_index < model_description_.outputs.size(); ++output_index) {
-            const auto& output = model_description_.outputs[output_index];
-            const std::string& cell = values[output.csv_column_index];
-            switch (output.value_type) {
+        for (const auto& binding : bindings_) {
+            const std::string& cell = values[binding.value_reference];
+            switch (binding.value_type) {
             case ValueType::real: {
                 double sample = 0.0;
                 if (!parse_double(cell, sample)) {
                     set_error("unable to parse real output value from csv");
                     return false;
                 }
-                output_samples_[output_index].emplace_back(sample);
+                output_samples_[binding.value_reference].emplace_back(sample);
                 break;
             }
             case ValueType::integer: {
@@ -437,7 +350,7 @@ bool FmuRuntime::load_csv_data() {
                     set_error("unable to parse integer output value from csv");
                     return false;
                 }
-                output_samples_[output_index].emplace_back(sample);
+                output_samples_[binding.value_reference].emplace_back(sample);
                 break;
             }
             case ValueType::boolean: {
@@ -446,12 +359,15 @@ bool FmuRuntime::load_csv_data() {
                     set_error("unable to parse boolean output value from csv");
                     return false;
                 }
-                output_samples_[output_index].emplace_back(sample);
+                output_samples_[binding.value_reference].emplace_back(sample);
                 break;
             }
             case ValueType::string:
-                output_samples_[output_index].emplace_back(cell);
+                output_samples_[binding.value_reference].emplace_back(cell);
                 break;
+            case ValueType::none:
+                set_error("unconfigured value reference encountered while loading csv");
+                return false;
             }
         }
     }
@@ -466,33 +382,31 @@ bool FmuRuntime::load_csv_data() {
     return true;
 }
 
-const OutputValue* FmuRuntime::value_at_time(std::size_t output_index, double query_time) const noexcept {
-    const auto& samples = output_samples_[output_index];
-    if (samples.empty()) {
-        return nullptr;
-    }
+std::size_t FmuRuntime::sample_index_at(double query_time) const noexcept {
     if (time_points_.size() == 1 || query_time <= time_points_.front()) {
-        return &samples.front();
+        return 0;
     }
     if (query_time >= time_points_.back()) {
-        return &samples.back();
+        return time_points_.size() - 1;
     }
 
     const auto upper = std::upper_bound(time_points_.begin(), time_points_.end(), query_time);
-    const std::size_t upper_index = static_cast<std::size_t>(upper - time_points_.begin()) - 1;
-    return &samples[upper_index];
+    return static_cast<std::size_t>(upper - time_points_.begin()) - 1;
 }
 
-double FmuRuntime::interpolate_real_value(std::size_t output_index, double query_time) const noexcept {
-    const auto& samples = output_samples_[output_index];
+double FmuRuntime::interpolate_real_value(std::size_t value_reference, double query_time) const noexcept {
+    const auto* samples = values_at(value_reference);
+    if (samples == nullptr || samples->empty()) {
+        return 0.0;
+    }
     if (time_points_.size() == 1) {
-        return std::get<double>(samples.front());
+        return std::get<double>((*samples).front());
     }
     if (query_time <= time_points_.front()) {
-        return std::get<double>(samples.front());
+        return std::get<double>((*samples).front());
     }
     if (query_time >= time_points_.back()) {
-        return std::get<double>(samples.back());
+        return std::get<double>((*samples).back());
     }
 
     const auto upper = std::upper_bound(time_points_.begin(), time_points_.end(), query_time);
@@ -501,8 +415,8 @@ double FmuRuntime::interpolate_real_value(std::size_t output_index, double query
 
     const double lower_time = time_points_[lower_index];
     const double upper_time = time_points_[upper_index];
-    const double lower_value = std::get<double>(samples[lower_index]);
-    const double upper_value = std::get<double>(samples[upper_index]);
+    const double lower_value = std::get<double>((*samples)[lower_index]);
+    const double upper_value = std::get<double>((*samples)[upper_index]);
 
     if (upper_time == lower_time) {
         return upper_value;
