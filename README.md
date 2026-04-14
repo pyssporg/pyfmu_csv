@@ -26,9 +26,66 @@ Supported output types today:
 - `Boolean`
 - `String`
 
-## Quick Start
+## Initial Setup
 
-Build the reusable C++ artifact:
+### Prerequisites
+
+For a native host setup, install:
+
+- Git
+- Python 3.10+
+- `venv`
+- CMake 3.21+
+- a C++17 compiler
+
+For the containerized path, install Podman instead of the native toolchain.
+
+### Clone And Initialize Submodules
+
+The FMI reference material is provided through the `3rd_party/fmi_2` submodule.
+
+```bash
+git clone <repo-url>
+cd pyfmu_csv
+git submodule update --init --recursive
+```
+
+If the repository is already cloned, still run:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Create And Activate A Virtual Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+```
+
+### Install Python Dependencies
+
+Install the packages listed in `requirements.txt`:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Install the project in editable mode so the `pyfmu-csv` CLI is available:
+
+```bash
+python -m pip install -e .
+```
+
+Built wheels can bundle the native runtime when `build/runtime/libpyfmu_csv_fmi2_cs*`
+already exists. Editable and source installs remain Python-only and will use either a
+bundled wheel runtime, an explicit `--runtime-library`, or a local `build/runtime`
+artifact at FMU generation time.
+
+## Native Build And Test
+
+Build the reusable C++ runtime:
 
 ```bash
 cmake -S . -B build
@@ -36,11 +93,16 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Run the Python tests:
+Run the Python test suite:
 
 ```bash
-python -m pytest tests
+python -m pytest
 ```
+
+After the native build, the runtime is available under `build/runtime/` and FMU
+generation can find it automatically.
+
+## Containerized Build And Test
 
 Use the Podman-based build container for a reproducible Ubuntu 22.04 / GCC 13 environment:
 
@@ -55,16 +117,9 @@ Open an interactive shell inside the same container:
 ./scripts/container_shell.sh
 ```
 
-Install the Python package to register the `pyfmu-csv` CLI from `[project.scripts]`:
+The container path builds the runtime, runs the tests, and packages a wheel in `dist/`.
 
-```bash
-pip install -e .
-```
-
-Built wheels can bundle the native runtime when `build/runtime/libpyfmu_csv_fmi2_cs*`
-already exists. Editable and source installs remain Python-only and will use either a
-bundled wheel runtime, an explicit `--runtime-library`, or a local `build/runtime`
-artifact at FMU generation time.
+## Generate An FMU
 
 Generate an FMU from a CSV file:
 

@@ -57,3 +57,8 @@ Makefile
 .envrc
 .cache/
 .codex
+
+# Keep the tracked container definition under containers/build/
+!containers/
+!containers/build/
+!containers/build/Containerfile
