@@ -20,6 +20,7 @@ def test_create_fmu_skeleton_creates_expected_layout(tmp_path) -> None:
 
     assert (output_dir / "modelDescription.xml").is_file()
     assert (output_dir / "resources" / "model.json").is_file()
+    assert (output_dir / "resources" / "data" / "signals.csv").is_file()
     manifest = json.loads((output_dir / "resources" / "model.json").read_text(encoding="utf-8"))
     assert manifest["outputs"][0]["name"] == "temperature"
     assert manifest["outputs"][1]["type"] == "Integer"
@@ -43,7 +44,10 @@ def test_package_fmu_from_csv_writes_archive(tmp_path) -> None:
     assert output_fmu.is_file()
     with ZipFile(output_fmu) as archive:
         names = set(archive.namelist())
+        model_description_xml = archive.read("modelDescription.xml").decode("utf-8")
     assert "modelDescription.xml" in names
     assert "resources/model.json" in names
+    assert "resources/data/signals.csv" in names
+    assert 'start="data/signals.csv"' in model_description_xml
     platform_dir, extension = host_platform_tuple()
     assert f"binaries/{platform_dir}/DemoModel{extension}" in names

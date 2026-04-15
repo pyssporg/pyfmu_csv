@@ -128,8 +128,8 @@ bool FmuRuntime::parse_header(const std::vector<std::string>& header) {
     return true;
 }
 
-bool FmuRuntime::load_csv_data() {
-    std::ifstream stream(csv_path_);
+bool FmuRuntime::load_csv_data(std::string_view csv_path) {
+    std::ifstream stream {std::string(csv_path)};
     if (!stream) {
         set_error("unable to open csv file");
         return false;

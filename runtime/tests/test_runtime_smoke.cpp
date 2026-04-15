@@ -30,16 +30,17 @@ int main() {
     using pyfmu_csv::runtime::FmuRuntime;
 
     const fs::path root = create_fixture_root("pyfmu_csv_runtime_smoke");
-    const fs::path csv_path = root / "signals.csv";
+    const fs::path csv_path = root / "resources" / "data" / "signals.csv";
 
+    std::filesystem::create_directories(csv_path.parent_path());
     std::ofstream(csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
 
     FmuRuntime runtime;
     if (!runtime.load_resource_location(to_file_uri(root / "resources"))) {
         return fail("expected resource location loading to succeed");
     }
-    if (!runtime.set_csv_path(csv_path.string())) {
-        return fail("expected csv path assignment to succeed");
+    if (!runtime.set_csv_path("data/signals.csv")) {
+        return fail("expected importer-style csv path assignment to succeed");
     }
     if (!runtime.initialize()) {
         return fail(runtime.last_error().c_str());
@@ -81,6 +82,9 @@ int main() {
     runtime.reset();
     if (runtime.try_get_real(1, real_value)) {
         return fail("expected real lookup after reset to fail");
+    }
+    if (!runtime.set_csv_path("data/signals.csv")) {
+        return fail("expected csv path assignment after reset to succeed");
     }
 
     return EXIT_SUCCESS;

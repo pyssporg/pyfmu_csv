@@ -31,9 +31,12 @@ std::string to_file_uri(const std::filesystem::path& path) {
 int main() {
     namespace fs = std::filesystem;
     const fs::path root = create_fixture_root();
-    const fs::path csv_path = root / "signals.csv";
+    const fs::path packaged_csv_path = root / "resources" / "data" / "signals.csv";
+    const fs::path override_csv_path = root / "override-signals.csv";
 
-    std::ofstream(csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
+    std::filesystem::create_directories(packaged_csv_path.parent_path());
+    std::ofstream(packaged_csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
+    std::ofstream(override_csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,20.0,3,false,override\n1.0,22.0,5,true,override-next\n";
 
     fmi2CallbackFunctions callbacks {};
     callbacks.logger = logger;
@@ -60,9 +63,9 @@ int main() {
     }
 
     const fmi2ValueReference csv_vr[] = {0};
-    const fmi2String csv_value[] = {csv_path.c_str()};
-    if (fmi2SetString(component, csv_vr, 1, csv_value) != fmi2OK) {
-        return fail("expected setString to succeed");
+    const fmi2String packaged_csv_value[] = {"data/signals.csv"};
+    if (fmi2SetString(component, csv_vr, 1, packaged_csv_value) != fmi2OK) {
+        return fail("expected importer-style default setString to succeed");
     }
     if (fmi2SetupExperiment(component, fmi2False, 0.0, 0.0, fmi2False, 0.0) != fmi2OK) {
         return fail("expected setupExperiment to succeed");
@@ -81,6 +84,11 @@ int main() {
     }
     if (real_output[0] != 10.0) {
         return fail("expected first real csv row value at start time");
+    }
+
+    fmi2String configured_csv_value[] = {nullptr};
+    if (fmi2GetString(component, csv_vr, 1, configured_csv_value) != fmi2OK || std::string(configured_csv_value[0]) != "data/signals.csv") {
+        return fail("expected csv parameter getter to expose configured path");
     }
 
     const fmi2ValueReference integer_vr[] = {2};
@@ -128,6 +136,37 @@ int main() {
     }
     if (fmi2GetString(component, string_vr, 1, string_output) != fmi2OK || std::string(string_output[0]) != "auto") {
         return fail("expected piecewise constant string value after doStep");
+    }
+
+    fmi2FreeInstance(component);
+
+    component = fmi2Instantiate(
+        "override",
+        fmi2CoSimulation,
+        "g",
+        to_file_uri(root / "resources").c_str(),
+        &callbacks,
+        fmi2False,
+        fmi2False);
+    if (component == nullptr) {
+        return fail("expected override instantiate to succeed");
+    }
+
+    const fmi2String csv_override_value[] = {override_csv_path.c_str()};
+    if (fmi2SetString(component, csv_vr, 1, csv_override_value) != fmi2OK) {
+        return fail("expected setString override to succeed");
+    }
+    if (fmi2SetupExperiment(component, fmi2False, 0.0, 0.0, fmi2False, 0.0) != fmi2OK) {
+        return fail("expected override setupExperiment to succeed");
+    }
+    if (fmi2EnterInitializationMode(component) != fmi2OK || fmi2ExitInitializationMode(component) != fmi2OK) {
+        return fail("expected override initialization to succeed");
+    }
+    if (fmi2GetReal(component, real_vr, 1, real_output) != fmi2OK || real_output[0] != 20.0) {
+        return fail("expected explicit csv_path override to take precedence");
+    }
+    if (fmi2GetString(component, csv_vr, 1, configured_csv_value) != fmi2OK || std::string(configured_csv_value[0]) != override_csv_path.string()) {
+        return fail("expected csv parameter getter to expose explicit override path");
     }
 
     fmi2FreeInstance(component);

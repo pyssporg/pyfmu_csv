@@ -44,6 +44,7 @@ class CsvModelDescription:
     guid: str
     csv_path_parameter: str
     source_csv: Path
+    packaged_csv_path: str
     outputs: tuple[SignalDefinition, ...]
 
     @classmethod
@@ -62,6 +63,7 @@ class CsvModelDescription:
             guid=str(uuid5(NAMESPACE_URL, guid_seed)),
             csv_path_parameter=csv_path_parameter,
             source_csv=source_csv,
+            packaged_csv_path=f"data/{source_csv.name}",
             outputs=outputs,
         )
 

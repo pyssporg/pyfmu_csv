@@ -14,7 +14,7 @@ The current product can:
 - build a reusable FMI 2.0 Co-Simulation shared library
 - expose the FMI 2.0 C API for initialization, stepping, and value access
 - embed the compiled runtime into `binaries/<platform>/<modelIdentifier>`
-- run the generated FMU through FMPy using the external `csv_path` parameter
+- run the generated FMU through FMPy using the packaged CSV fallback or an explicit `csv_path` override
 - validate the generated artifact structurally with FMPy
 
 The current chain works end to end after the native runtime has been built.

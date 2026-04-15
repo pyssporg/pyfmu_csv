@@ -13,6 +13,7 @@ def test_model_description_declares_csv_path_parameter_and_outputs(tmp_path) -> 
 
     assert 'modelName="DemoModel"' in xml
     assert 'name="csv_path"' in xml
+    assert 'start="data/signals.csv"' in xml
     assert 'name="temperature"' in xml
     assert 'valueReference="1"' in xml
     assert "<Outputs>" in xml

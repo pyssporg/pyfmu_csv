@@ -36,7 +36,7 @@ def build_model_description_xml(model: CsvModelDescription) -> str:
             "causality": "parameter",
         },
     )
-    SubElement(csv_parameter, "String", {"start": ""})
+    SubElement(csv_parameter, "String", {"start": model.packaged_csv_path})
 
     for signal in model.outputs:
         variability = "continuous" if signal.signal_type.value == "Real" else "discrete"

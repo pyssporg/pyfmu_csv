@@ -33,12 +33,13 @@ The current generated FMU is executable when:
 
 - the native runtime has been built first
 - the simulator supports the packaged host platform
-- the external `csv_path` start value is provided before initialization
+- the packaged CSV is present under `resources/data/`
+- the simulator/importer applies the `csv_path` start value from `modelDescription.xml`, or overrides `csv_path` before initialization
 
 ## Runtime Contract
 
-- The CSV file remains external to the FMU package.
-- The FMU exposes a `csv_path` parameter.
+- The FMU packages the source CSV under `resources/data/<source_csv.name>`.
+- The FMU exposes a `csv_path` parameter with a resource-relative default value.
 - The runtime is expected to read the file during initialization only.
 - Execution uses in-memory signal data only.
 - `Real` outputs are linearly interpolated.

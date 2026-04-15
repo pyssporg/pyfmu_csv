@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 namespace pyfmu_csv::runtime {
 namespace {
@@ -63,7 +64,7 @@ bool FmuRuntime::initialize() {
         initialized_ = false;
         return false;
     }
-    initialized_ = load_csv_data();
+    initialized_ = load_csv_data(resolve_csv_path(csv_path_));
     return initialized_;
 }
 
@@ -115,6 +116,14 @@ void FmuRuntime::clear_loaded_data() {
 
 void FmuRuntime::set_error(std::string message) {
     last_error_ = std::move(message);
+}
+
+std::string FmuRuntime::resolve_csv_path(std::string_view csv_path) const {
+    std::filesystem::path path(csv_path);
+    if (path.is_absolute() || resource_root_.empty()) {
+        return path.string();
+    }
+    return (std::filesystem::path(resource_root_) / path).lexically_normal().string();
 }
 
 }  // namespace pyfmu_csv::runtime

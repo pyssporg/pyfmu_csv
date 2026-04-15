@@ -2,8 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <string_view>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -48,13 +48,14 @@ public:
 
 private:
     void clear_loaded_data();
-    bool load_csv_data();
+    bool load_csv_data(std::string_view csv_path);
     bool parse_header(const std::vector<std::string>& header);
     const OutputBinding* binding_for(std::size_t value_reference) const noexcept;
     bool has_valid_access(std::size_t value_reference, ValueType expected_type) const noexcept;
     const std::vector<OutputValue>* values_at(std::size_t value_reference) const noexcept;
     std::size_t sample_index_at(double query_time) const noexcept;
     double interpolate_real_value(std::size_t value_reference, double query_time) const noexcept;
+    std::string resolve_csv_path(std::string_view csv_path) const;
     void set_error(std::string message);
 
     std::string resource_root_;

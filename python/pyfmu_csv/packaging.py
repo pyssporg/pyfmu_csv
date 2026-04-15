@@ -89,9 +89,11 @@ def create_fmu_skeleton(
     root = Path(output_dir)
     resources_dir = root / "resources"
     sources_dir = root / "sources"
+    data_dir = resources_dir / "data"
 
     resources_dir.mkdir(parents=True, exist_ok=True)
     sources_dir.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     model_description_xml = build_model_description_xml(model)
     (root / "modelDescription.xml").write_text(
@@ -122,13 +124,15 @@ def create_fmu_skeleton(
         + "\n",
         encoding="utf-8",
     )
+    packaged_csv_path = resources_dir / model.packaged_csv_path
+    packaged_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(model.source_csv, packaged_csv_path)
     (resources_dir / "README.txt").write_text(
         dedent(
             """\
-            This FMU expects the CSV file to remain external.
-            Configure the csv_path model parameter before initialization.
-            The runtime is expected to load the file once and serve signal values
-            from memory during execution.
+            This FMU includes the source CSV under resources/.
+            By default the runtime loads that packaged CSV.
+            Configure the csv_path model parameter to override it before initialization.
             """
         ),
         encoding="utf-8",
