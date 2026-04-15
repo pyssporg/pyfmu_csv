@@ -1,6 +1,7 @@
 # Testing
 
-## Test Levels
+This page assumes you are already set up for source-based development. If not, start with
+[Build From Source](build-from-source.md).
 
 ## Containerized Path
 
@@ -17,6 +18,8 @@ To inspect or debug the environment interactively:
 ```bash
 ./scripts/container_shell.sh
 ```
+
+## Test Levels
 
 ### Runtime smoke tests
 

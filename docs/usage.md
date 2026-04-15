@@ -5,13 +5,6 @@
 The main usage path is to install the published wheel so you do not need a local native
 build.
 
-The CLI is exposed by the package entry point declared in `pyproject.toml`:
-
-```toml
-[project.scripts]
-pyfmu-csv = "pyfmu_csv.cli:main"
-```
-
 Install the published wheel:
 
 ```bash
@@ -24,12 +17,15 @@ pyfmu-csv --help
 This published wheel path is for Linux `cp310` and avoids the local CMake/native build
 step.
 
+If the published wheel does not match your platform or Python version, use the
+[Build From Source](build-from-source.md) guide.
+
 ## Generate an FMU
 
 ```bash
 pyfmu-csv generate-fmu \
   --input-csv samples/signals.csv \
-  --output build/CsvSignals.fmu \
+  --output CsvSignals.fmu \
   --model-name CsvSignals
 ```
 
@@ -68,77 +64,10 @@ Wheel builds can bundle the native runtime if it has already been compiled into
 
 ## Build From Source
 
-Everything below this point requires a source checkout.
+For checkout, submodules, editable install, native build, Podman, and wheel packaging,
+use the canonical guide:
 
-### Prerequisites
-
-- Git
-- Python 3.10+
-- `pytest` for Python tests
-- `fmpy` for structural FMU inspection
-- `cmake` plus a C++ compiler for the reusable runtime artifact
-- `podman` for the reproducible Ubuntu 22.04 / GCC 13 build container
-
-### Clone And Initialize Submodules
-
-```bash
-git clone <repo-url>
-cd pyfmu_csv
-git submodule update --init --recursive
-```
-
-### Editable Install
-
-From the repository root:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-If you do not want to install the package, you can still run the module directly with `PYTHONPATH=python ./venv/bin/python -m pyfmu_csv ...`.
-
-### Native Build
-
-By default, source-based FMU generation looks for the compiled runtime at:
-
-```text
-build/runtime/libpyfmu_csv_fmi2_cs.so
-```
-
-Build it with:
-
-```bash
-cmake -S . -B build
-cmake --build build
-```
-
-### Podman Build Container
-
-Build the local image:
-
-```bash
-./scripts/build_container.sh
-```
-
-Run the full build and test pipeline inside the container:
-
-```bash
-./scripts/container_build.sh
-```
-
-Open an interactive shell in the same containerized environment:
-
-```bash
-./scripts/container_shell.sh
-```
-
-The helper scripts mount the repository into `/workspace` and use the
-`containers/build/Containerfile` definition as the single source of truth for
-the build environment.
+- [Build From Source](build-from-source.md)
 
 ## Inspect a CSV Contract
 
@@ -168,15 +97,4 @@ Use this when you want to inspect the intermediate package layout before it is z
 
 ## Run the Full Verification Chain
 
-```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-pytest tests
-```
-
-The equivalent containerized path is:
-
-```bash
-./scripts/container_build.sh
-```
+See [Testing](testing.md).
