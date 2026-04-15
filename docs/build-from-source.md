@@ -102,3 +102,7 @@ python -m build --wheel
 ```
 
 The resulting wheel is written to `dist/`.
+
+Because the wheel bundles a platform-specific FMU runtime but does not expose a Python
+C extension module, it is tagged as `py3-none-<platform>` rather than `cp310-cp310`
+or `abi3`.

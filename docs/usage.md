@@ -10,12 +10,12 @@ Install the published wheel:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-cp310-cp310-linux_x86_64.whl
+python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-py3-none-linux_x86_64.whl
 pyfmu-csv --help
 ```
 
-This published wheel path is for Linux `cp310` and avoids the local CMake/native build
-step.
+This published wheel path is for Linux and uses the `py3-none-linux_x86_64` wheel tag,
+so it is not tied to a single CPython minor version.
 
 If the published wheel does not match your platform or Python version, use the
 [Build From Source](build-from-source.md) guide.

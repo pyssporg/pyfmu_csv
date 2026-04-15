@@ -34,7 +34,7 @@ without cloning the repo or building the source tree.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-cp310-cp310-linux_x86_64.whl
+python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-py3-none-linux_x86_64.whl
 ```
 
 After installation, the CLI and bundled runtime are ready to use:
@@ -47,7 +47,7 @@ pyfmu-csv generate-fmu \
   --model-name CsvSignals
 ```
 
-This published wheel path is currently for Linux `cp310`.
+This published wheel path is currently for Linux and is tagged `py3-none-linux_x86_64`.
 
 If the published wheel does not match your platform or Python version, use the
 [Build From Source](docs/build-from-source.md) guide instead.
