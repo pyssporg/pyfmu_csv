@@ -26,98 +26,28 @@ Supported output types today:
 - `Boolean`
 - `String`
 
-## Initial Setup
+## Install And Use
 
-### Prerequisites
-
-For a native host setup, install:
-
-- Git
-- Python 3.10+
-- `venv`
-- CMake 3.21+
-- a C++17 compiler
-
-For the containerized path, install Podman instead of the native toolchain.
-
-### Clone And Initialize Submodules
-
-The FMI reference material is provided through the `3rd_party/fmi_2` submodule.
-
-```bash
-git clone <repo-url>
-cd pyfmu_csv
-git submodule update --init --recursive
-```
-
-If the repository is already cloned, still run:
-
-```bash
-git submodule update --init --recursive
-```
-
-### Create And Activate A Virtual Environment
+This is the main usage path. Install the published wheel and use the bundled runtime
+without cloning the repo or building the source tree.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
+python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-cp310-cp310-linux_x86_64.whl
 ```
 
-### Install Python Dependencies
-
-Install the packages listed in `requirements.txt`:
+After installation, the CLI and bundled runtime are ready to use:
 
 ```bash
-python -m pip install -r requirements.txt
+pyfmu-csv --help
+pyfmu-csv generate-fmu \
+  --input-csv samples/signals.csv \
+  --output CsvSignals.fmu \
+  --model-name CsvSignals
 ```
 
-Install the project in editable mode so the `pyfmu-csv` CLI is available:
-
-```bash
-python -m pip install -e .
-```
-
-Built wheels can bundle the native runtime when `build/runtime/libpyfmu_csv_fmi2_cs*`
-already exists. Editable and source installs remain Python-only and will use either a
-bundled wheel runtime, an explicit `--runtime-library`, or a local `build/runtime`
-artifact at FMU generation time.
-
-## Native Build And Test
-
-Build the reusable C++ runtime:
-
-```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
-
-Run the Python test suite:
-
-```bash
-python -m pytest
-```
-
-After the native build, the runtime is available under `build/runtime/` and FMU
-generation can find it automatically.
-
-## Containerized Build And Test
-
-Use the Podman-based build container for a reproducible Ubuntu 22.04 / GCC 13 environment:
-
-```bash
-./scripts/build_container.sh
-./scripts/container_build.sh
-```
-
-Open an interactive shell inside the same container:
-
-```bash
-./scripts/container_shell.sh
-```
-
-The container path builds the runtime, runs the tests, and packages a wheel in `dist/`.
+This published wheel path is currently for Linux `cp310`.
 
 ## Generate An FMU
 
@@ -153,6 +83,79 @@ pyfmu-csv inspect-csv \
   --input-csv samples/signals.csv \
   --model-name CsvSignals
 ```
+
+## Build From Source
+
+Everything below this point requires access to the source tree.
+
+### Prerequisites
+
+For a native host setup, install:
+
+- Git
+- Python 3.10+
+- `venv`
+- CMake 3.21+
+- a C++17 compiler
+
+For the containerized path, install Podman instead of the native toolchain.
+
+### Clone And Initialize Submodules
+
+The FMI reference material is provided through the `3rd_party/fmi_2` submodule.
+
+```bash
+git clone <repo-url>
+cd pyfmu_csv
+git submodule update --init --recursive
+```
+
+If the repository is already cloned, still run:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Create And Activate A Virtual Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+Editable and source installs remain Python-only and will use either a bundled wheel
+runtime, an explicit `--runtime-library`, or a local `build/runtime` artifact at FMU
+generation time.
+
+### Native Build And Test
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+python -m pytest
+```
+
+After the native build, the runtime is available under `build/runtime/` and FMU
+generation can find it automatically.
+
+### Containerized Build And Test
+
+```bash
+./scripts/build_container.sh
+./scripts/container_build.sh
+```
+
+For an interactive shell inside the same container:
+
+```bash
+./scripts/container_shell.sh
+```
+
+The container path builds the runtime, runs the tests, and packages a wheel in `dist/`.
 
 ## Documentation
 

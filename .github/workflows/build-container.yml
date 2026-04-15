@@ -42,6 +42,16 @@ jobs:
           path: dist/*.whl
           if-no-files-found: error
 
+      - name: Create static latest wheel asset
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          wheel_path="$(find dist -maxdepth 1 -name '*.whl' | head -n 1)"
+          test -n "${wheel_path}"
+          wheel_name="$(basename "${wheel_path}")"
+          IFS='-' read -r dist_name version python_tag abi_tag platform_tag <<< "${wheel_name%.whl}"
+          static_name="${dist_name}-0-${python_tag}-${abi_tag}-${platform_tag}.whl"
+          cp "${wheel_path}" "dist/${static_name}"
+
       - name: Publish wheel on tag
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2

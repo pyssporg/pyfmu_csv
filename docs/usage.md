@@ -1,59 +1,28 @@
 # Usage
 
-## Prerequisites
-
-- Python 3.10+
-- `pytest` for Python tests
-- `fmpy` for structural FMU inspection
-- `cmake` plus a C++ compiler for the reusable runtime artifact
-- `podman` for the reproducible Ubuntu 22.04 / GCC 13 build container
-
-## Podman Build Container
-
-Build the local image:
-
-```bash
-./scripts/build_container.sh
-```
-
-Run the full build and test pipeline inside the container:
-
-```bash
-./scripts/container_build.sh
-```
-
-Open an interactive shell in the same containerized environment:
-
-```bash
-./scripts/container_shell.sh
-```
-
-The helper scripts mount the repository into `/workspace` and use the
-`containers/build/Containerfile` definition as the single source of truth for
-the build environment.
-
 ## Install the CLI
 
-Install the package so setuptools exposes the `pyfmu-csv` command declared in `pyproject.toml`:
+The main usage path is to install the published wheel so you do not need a local native
+build.
+
+The CLI is exposed by the package entry point declared in `pyproject.toml`:
 
 ```toml
 [project.scripts]
 pyfmu-csv = "pyfmu_csv.cli:main"
 ```
 
-From the repository root:
+Install the published wheel:
 
 ```bash
-pip install -e .
-```
-
-After that, the CLI is available as:
-
-```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install https://github.com/pyssporg/pyfmu_csv/releases/latest/download/pyfmu_csv-0-cp310-cp310-linux_x86_64.whl
 pyfmu-csv --help
 ```
 
-If you do not want to install the package, you can still run the module directly with `PYTHONPATH=python ./venv/bin/python -m pyfmu_csv ...`.
+This published wheel path is for Linux `cp310` and avoids the local CMake/native build
+step.
 
 ## Generate an FMU
 
@@ -81,12 +50,6 @@ time,temperature,count:Integer,enabled:Boolean,mode:String
 
 Type annotations are optional. Columns without an annotation default to `Real`.
 
-By default, the generator looks for the compiled runtime at:
-
-```text
-build/runtime/libpyfmu_csv_fmi2_cs.so
-```
-
 Runtime lookup order is:
 
 1. `--runtime-library`
@@ -102,6 +65,80 @@ You can override that with:
 Wheel builds can bundle the native runtime if it has already been compiled into
 `build/runtime/`. Editable and source installs do not build the runtime during
 `pip install`.
+
+## Build From Source
+
+Everything below this point requires a source checkout.
+
+### Prerequisites
+
+- Git
+- Python 3.10+
+- `pytest` for Python tests
+- `fmpy` for structural FMU inspection
+- `cmake` plus a C++ compiler for the reusable runtime artifact
+- `podman` for the reproducible Ubuntu 22.04 / GCC 13 build container
+
+### Clone And Initialize Submodules
+
+```bash
+git clone <repo-url>
+cd pyfmu_csv
+git submodule update --init --recursive
+```
+
+### Editable Install
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+If you do not want to install the package, you can still run the module directly with `PYTHONPATH=python ./venv/bin/python -m pyfmu_csv ...`.
+
+### Native Build
+
+By default, source-based FMU generation looks for the compiled runtime at:
+
+```text
+build/runtime/libpyfmu_csv_fmi2_cs.so
+```
+
+Build it with:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+### Podman Build Container
+
+Build the local image:
+
+```bash
+./scripts/build_container.sh
+```
+
+Run the full build and test pipeline inside the container:
+
+```bash
+./scripts/container_build.sh
+```
+
+Open an interactive shell in the same containerized environment:
+
+```bash
+./scripts/container_shell.sh
+```
+
+The helper scripts mount the repository into `/workspace` and use the
+`containers/build/Containerfile` definition as the single source of truth for
+the build environment.
 
 ## Inspect a CSV Contract
 
