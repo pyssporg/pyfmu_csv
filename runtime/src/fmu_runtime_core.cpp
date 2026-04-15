@@ -38,6 +38,10 @@ std::string decode_file_uri(std::string_view location) {
 
 }  // namespace
 
+// TODO: 
+// Look over how the default path is setup in the model description and compare how it should be read
+// hard to access the ssp resources from the fmu at the moment
+
 bool FmuRuntime::load_resource_location(std::string_view resource_location) {
     std::filesystem::path resources_path(decode_file_uri(resource_location));
     resources_path = resources_path.lexically_normal();
@@ -50,12 +54,33 @@ bool FmuRuntime::load_resource_location(std::string_view resource_location) {
     initialized_ = false;
     clear_loaded_data();
     last_error_.clear();
+
+    const auto data_dir = resources_path / "data";
+    if (std::filesystem::is_directory(data_dir)) {
+        for (const auto& entry : std::filesystem::directory_iterator(data_dir)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".csv") {
+                continue;
+            }
+            csv_path_ = (std::filesystem::path("data") / entry.path().filename()).string();
+            initialized_ = load_csv_data(resolve_csv_path(csv_path_));
+            break;
+        }
+    }
     return true;
 }
 
 bool FmuRuntime::set_csv_path(std::string csv_path) {
     csv_path_ = std::move(csv_path);
-    return !csv_path_.empty();
+    clear_loaded_data();
+    initialized_ = false;
+    last_error_.clear();
+
+    if (csv_path_.empty()) {
+        return false;
+    }
+
+    initialized_ = load_csv_data(resolve_csv_path(csv_path_));
+    return initialized_;
 }
 
 bool FmuRuntime::initialize() {
