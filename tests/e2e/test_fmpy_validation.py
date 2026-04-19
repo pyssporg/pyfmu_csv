@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+fmpy = pytest.importorskip("fmpy")
 from fmpy import read_model_description, simulate_fmu
 
 from pyfmu_csv.packaging import package_fmu_from_csv
