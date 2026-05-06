@@ -58,9 +58,9 @@ You can override that with:
 --runtime-library /path/to/shared/library
 ```
 
-Wheel builds can bundle the native runtime if it has already been compiled into
-`build/runtime/`. Editable and source installs do not build the runtime during
-`pip install`.
+Wheel builds require the native runtime to already exist in `build/runtime/`
+and fail if it is missing. Editable and source installs do not build the runtime
+during `pip install`.
 
 ## Build From Source
 

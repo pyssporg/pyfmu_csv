@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -23,18 +22,16 @@ from pyfmu_csv.packaging import default_runtime_library_path, runtime_library_fi
 class build_py(_build_py):
     def run(self) -> None:
         super().run()
-        if getattr(self.distribution, "pyfmu_csv_bundle_runtime", False):
-            self._bundle_runtime_if_available()
+        # Wheel builds must bundle the native runtime binary.
 
-    def _bundle_runtime_if_available(self) -> None:
+        self._bundle_runtime()
+
+    def _bundle_runtime(self) -> None:
         source = default_runtime_library_path(ROOT)
         if not source.is_file():
-            if os.environ.get("PYFMU_CSV_REQUIRE_BUNDLED_RUNTIME") == "1":
-                raise FileNotFoundError(
-                    f"runtime library does not exist: {source}. Build the native runtime before building the wheel."
-                )
-            self.warn(f"skipping bundled runtime because {source} does not exist")
-            return
+            raise FileNotFoundError(
+                f"runtime library does not exist: {source}. Build the native runtime before building the wheel."
+            )
 
         destination_dir = Path(self.build_lib) / "pyfmu_csv" / "_runtime"
         destination_dir.mkdir(parents=True, exist_ok=True)
@@ -47,9 +44,6 @@ class build_py(_build_py):
 if _bdist_wheel is not None:
 
     class bdist_wheel(_bdist_wheel):
-        def run(self) -> None:
-            self.distribution.pyfmu_csv_bundle_runtime = True
-            super().run()
 
         def finalize_options(self) -> None:
             super().finalize_options()
