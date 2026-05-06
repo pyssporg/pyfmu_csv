@@ -54,6 +54,7 @@ bool FmuRuntime::load_resource_location(std::string_view resource_location) {
     initialized_ = false;
     clear_loaded_data();
     last_error_.clear();
+    csv_path_.clear();
 
     const auto data_dir = resources_path / "data";
     if (std::filesystem::is_directory(data_dir)) {
@@ -62,7 +63,6 @@ bool FmuRuntime::load_resource_location(std::string_view resource_location) {
                 continue;
             }
             csv_path_ = (std::filesystem::path("data") / entry.path().filename()).string();
-            initialized_ = load_csv_data(resolve_csv_path(csv_path_));
             break;
         }
     }
@@ -79,8 +79,7 @@ bool FmuRuntime::set_csv_path(std::string csv_path) {
         return false;
     }
 
-    initialized_ = load_csv_data(resolve_csv_path(csv_path_));
-    return initialized_;
+    return true;
 }
 
 bool FmuRuntime::initialize() {

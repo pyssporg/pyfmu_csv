@@ -42,6 +42,9 @@ int main() {
     if (!runtime.set_csv_path("data/signals.csv")) {
         return fail("expected importer-style csv path assignment to succeed");
     }
+    if (runtime.initialized()) {
+        return fail("runtime should not report initialized before initialize()");
+    }
     if (!runtime.initialize()) {
         return fail(runtime.last_error().c_str());
     }
