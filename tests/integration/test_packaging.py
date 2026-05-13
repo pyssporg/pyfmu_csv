@@ -46,6 +46,7 @@ def test_create_fmu_skeleton_can_skip_copying_source_csv(tmp_path) -> None:
     assert (output_dir / "resources" / "model.json").is_file()
     assert not (output_dir / "resources" / "data" / "signals.csv").exists()
     model_description_xml = (output_dir / "modelDescription.xml").read_text(encoding="utf-8")
+    assert "<String" in model_description_xml
     assert 'start="data/signals.csv"' not in model_description_xml
 
 
@@ -90,6 +91,7 @@ def test_package_fmu_from_csv_can_skip_copying_source_csv(tmp_path) -> None:
         names = set(archive.namelist())
         model_description_xml = archive.read("modelDescription.xml").decode("utf-8")
     assert "resources/data/signals.csv" not in names
+    assert "<String" in model_description_xml
     assert 'start="data/signals.csv"' not in model_description_xml
     platform_dir, extension = host_platform_tuple()
     assert f"binaries/{platform_dir}/DemoModel{extension}" in names

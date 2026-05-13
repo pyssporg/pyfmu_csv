@@ -27,6 +27,7 @@ def test_model_description_can_omit_packaged_csv_start_value(tmp_path) -> None:
     xml = build_model_description_xml(model, csv_path_start=None)
 
     assert 'name="csv_path"' in xml
+    assert "<String" in xml
     assert 'start="data/signals.csv"' not in xml
 
 

@@ -45,8 +45,9 @@ def build_model_description_xml(
             "causality": "parameter",
         },
     )
+    csv_parameter_type = SubElement(csv_parameter, "String")
     if csv_path_start is not None:
-        SubElement(csv_parameter, "String", {"start": cast(str, csv_path_start)})
+        csv_parameter_type.set("start", cast(str, csv_path_start))
 
     for signal in model.outputs:
         variability = "continuous" if signal.signal_type.value == "Real" else "discrete"
