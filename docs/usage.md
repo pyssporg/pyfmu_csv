@@ -98,6 +98,11 @@ Use this when you want to inspect the intermediate package layout before it is z
 
 Add `--no-copy-csv` when you want the FMU package to omit the source CSV and require an explicit `csv_path` override before initialization.
 
+The `csv_path` parameter accepts either:
+
+- an absolute path to an external CSV file
+- a relative path, which is first checked as written and then against the FMU `resources/` directory
+
 ## Run the Full Verification Chain
 
 See [Testing](testing.md).

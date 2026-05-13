@@ -31,9 +31,12 @@ int main() {
 
     const fs::path root = create_fixture_root("pyfmu_csv_runtime_smoke");
     const fs::path csv_path = root / "resources" / "data" / "signals.csv";
+    const fs::path relative_override_path = root / "override-signals.csv";
+    const fs::path previous_cwd = fs::current_path();
 
     std::filesystem::create_directories(csv_path.parent_path());
     std::ofstream(csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
+    std::ofstream(relative_override_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,20.0,3,false,relative\n1.0,22.0,5,true,relative-next\n";
 
     FmuRuntime runtime;
     if (!runtime.load_resource_location(to_file_uri(root / "resources"))) {
@@ -89,6 +92,21 @@ int main() {
     if (!runtime.set_csv_path("data/signals.csv")) {
         return fail("expected csv path assignment after reset to succeed");
     }
+
+    fs::current_path(root);
+    runtime.reset();
+    if (!runtime.set_csv_path("override-signals.csv")) {
+        return fail("expected relative external csv path assignment to succeed");
+    }
+    if (!runtime.initialize()) {
+        return fail(runtime.last_error().c_str());
+    }
+    runtime.set_time(0.0);
+    if (!runtime.try_get_real(1, real_value) || real_value != 20.0) {
+        return fail("expected relative external csv path to resolve from the current working directory");
+    }
+
+    fs::current_path(previous_cwd);
 
     return EXIT_SUCCESS;
 }

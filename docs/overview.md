@@ -38,6 +38,8 @@ The current generated FMU is executable when:
 
 When packaging is configured to omit the source CSV, the FMU still exposes `csv_path`, but it must be set externally before initialization.
 
+Relative external paths are supported, and the runtime will still honor the packaged `resources/data/<name>.csv` fallback when that file exists.
+
 ## Runtime Contract
 
 - The FMU packages the source CSV under `resources/data/<source_csv.name>`.

@@ -33,10 +33,15 @@ int main() {
     const fs::path root = create_fixture_root();
     const fs::path packaged_csv_path = root / "resources" / "data" / "signals.csv";
     const fs::path override_csv_path = root / "override-signals.csv";
+    const fs::path relative_override_csv_path = root / "relative-signals.csv";
+    const fs::path previous_cwd = fs::current_path();
+
+    fs::current_path(root);
 
     std::filesystem::create_directories(packaged_csv_path.parent_path());
     std::ofstream(packaged_csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,10.0,2,true,auto\n1.0,12.0,4,false,manual\n";
     std::ofstream(override_csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,20.0,3,false,override\n1.0,22.0,5,true,override-next\n";
+    std::ofstream(relative_override_csv_path) << "time,temperature,count:Integer,enabled:Boolean,mode:String\n0.0,30.0,7,true,relative\n1.0,32.0,9,false,relative-next\n";
 
     fmi2CallbackFunctions callbacks {};
     callbacks.logger = logger;
@@ -170,5 +175,37 @@ int main() {
     }
 
     fmi2FreeInstance(component);
+
+    component = fmi2Instantiate(
+        "relative-override",
+        fmi2CoSimulation,
+        "g",
+        to_file_uri(root / "resources").c_str(),
+        &callbacks,
+        fmi2False,
+        fmi2False);
+    if (component == nullptr) {
+        return fail("expected relative override instantiate to succeed");
+    }
+
+    const fmi2String relative_csv_override_value[] = {"relative-signals.csv"};
+    if (fmi2SetString(component, csv_vr, 1, relative_csv_override_value) != fmi2OK) {
+        return fail("expected relative setString override to succeed");
+    }
+    if (fmi2SetupExperiment(component, fmi2False, 0.0, 0.0, fmi2False, 0.0) != fmi2OK) {
+        return fail("expected relative override setupExperiment to succeed");
+    }
+    if (fmi2EnterInitializationMode(component) != fmi2OK || fmi2ExitInitializationMode(component) != fmi2OK) {
+        return fail("expected relative override initialization to succeed");
+    }
+    if (fmi2GetReal(component, real_vr, 1, real_output) != fmi2OK || real_output[0] != 30.0) {
+        return fail("expected relative csv_path override to resolve from the current working directory");
+    }
+    if (fmi2GetString(component, csv_vr, 1, configured_csv_value) != fmi2OK || std::string(configured_csv_value[0]) != "relative-signals.csv") {
+        return fail("expected csv parameter getter to expose relative override path");
+    }
+
+    fmi2FreeInstance(component);
+    fs::current_path(previous_cwd);
     return EXIT_SUCCESS;
 }

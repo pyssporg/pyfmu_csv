@@ -147,7 +147,17 @@ std::string FmuRuntime::resolve_csv_path(std::string_view csv_path) const {
     if (path.is_absolute() || resource_root_.empty()) {
         return path.string();
     }
-    return (std::filesystem::path(resource_root_) / path).lexically_normal().string();
+
+    if (std::filesystem::exists(path)) {
+        return path.lexically_normal().string();
+    }
+
+    const std::filesystem::path resource_candidate = std::filesystem::path(resource_root_) / path;
+    if (std::filesystem::exists(resource_candidate)) {
+        return resource_candidate.lexically_normal().string();
+    }
+
+    return path.string();
 }
 
 }  // namespace pyfmu_csv::runtime
