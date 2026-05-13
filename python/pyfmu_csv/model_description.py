@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+from typing import cast
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from .model import CsvModelDescription
 
+_DEFAULT_CSV_PATH_START = object()
 
-def build_model_description_xml(model: CsvModelDescription) -> str:
+
+def build_model_description_xml(
+    model: CsvModelDescription,
+    csv_path_start: object = _DEFAULT_CSV_PATH_START,
+) -> str:
+    if csv_path_start is _DEFAULT_CSV_PATH_START:
+        csv_path_start = model.packaged_csv_path
+
     root = Element(
         "fmiModelDescription",
         {
@@ -36,7 +45,8 @@ def build_model_description_xml(model: CsvModelDescription) -> str:
             "causality": "parameter",
         },
     )
-    SubElement(csv_parameter, "String", {"start": model.packaged_csv_path})
+    if csv_path_start is not None:
+        SubElement(csv_parameter, "String", {"start": cast(str, csv_path_start)})
 
     for signal in model.outputs:
         variability = "continuous" if signal.signal_type.value == "Real" else "discrete"

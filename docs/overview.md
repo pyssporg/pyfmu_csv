@@ -36,6 +36,8 @@ The current generated FMU is executable when:
 - the packaged CSV is present under `resources/data/`
 - the simulator/importer applies the `csv_path` start value from `modelDescription.xml`, or overrides `csv_path` before initialization
 
+When packaging is configured to omit the source CSV, the FMU still exposes `csv_path`, but it must be set externally before initialization.
+
 ## Runtime Contract
 
 - The FMU packages the source CSV under `resources/data/<source_csv.name>`.

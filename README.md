@@ -15,6 +15,7 @@ The current product can:
 - expose the FMI 2.0 C API for initialization, stepping, and value access
 - embed the compiled runtime into `binaries/<platform>/<modelIdentifier>`
 - run the generated FMU through FMPy using the packaged CSV fallback or an explicit `csv_path` override
+- optionally omit the source CSV from the packaged FMU and provide `csv_path` externally
 - validate the generated artifact structurally with FMPy
 
 The current chain works end to end after the native runtime has been built.
@@ -62,6 +63,8 @@ pyfmu-csv generate-fmu \
   --output CsvSignals.fmu \
   --model-name CsvSignals
 ```
+
+Add `--no-copy-csv` if you want to omit the CSV from the FMU and set `csv_path` externally before initialization.
 
 Inspect the CSV-to-VR mapping:
 

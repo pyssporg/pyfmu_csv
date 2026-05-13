@@ -19,6 +19,17 @@ def test_model_description_declares_csv_path_parameter_and_outputs(tmp_path) -> 
     assert "<Outputs>" in xml
 
 
+def test_model_description_can_omit_packaged_csv_start_value(tmp_path) -> None:
+    csv_path = tmp_path / "signals.csv"
+    csv_path.write_text("time,temperature,pressure\n0,1,2\n", encoding="utf-8")
+
+    model = load_csv_model(csv_path, "DemoModel")
+    xml = build_model_description_xml(model, csv_path_start=None)
+
+    assert 'name="csv_path"' in xml
+    assert 'start="data/signals.csv"' not in xml
+
+
 def test_model_description_emits_supported_scalar_types(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text(

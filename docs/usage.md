@@ -36,6 +36,7 @@ This command:
 - maps all remaining columns to output variables
 - assigns sequential value references starting at `1`
 - copies the compiled generic FMI runtime into the FMU
+- copies the source CSV into `resources/data/` unless `--no-copy-csv` is set
 - writes a zipped `.fmu` archive
 
 Header syntax:
@@ -94,6 +95,8 @@ pyfmu-csv create-fmu-skeleton \
 ```
 
 Use this when you want to inspect the intermediate package layout before it is zipped into a final `.fmu`.
+
+Add `--no-copy-csv` when you want the FMU package to omit the source CSV and require an explicit `csv_path` override before initialization.
 
 ## Run the Full Verification Chain
 

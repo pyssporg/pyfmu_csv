@@ -85,6 +85,8 @@ def create_fmu_skeleton(
     output_dir: str | Path,
     model: CsvModelDescription,
     runtime_library: str | Path | None = None,
+    *,
+    copy_source_csv: bool = True,
 ) -> Path:
     root = Path(output_dir)
     resources_dir = root / "resources"
@@ -95,7 +97,10 @@ def create_fmu_skeleton(
     sources_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    model_description_xml = build_model_description_xml(model)
+    model_description_xml = build_model_description_xml(
+        model,
+        None if not copy_source_csv else model.packaged_csv_path,
+    )
     (root / "modelDescription.xml").write_text(
         model_description_xml,
         encoding="utf-8",
@@ -124,17 +129,26 @@ def create_fmu_skeleton(
         + "\n",
         encoding="utf-8",
     )
-    packaged_csv_path = resources_dir / model.packaged_csv_path
-    packaged_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(model.source_csv, packaged_csv_path)
-    (resources_dir / "README.txt").write_text(
-        dedent(
+    if copy_source_csv:
+        packaged_csv_path = resources_dir / model.packaged_csv_path
+        packaged_csv_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(model.source_csv, packaged_csv_path)
+        resources_readme = dedent(
             """\
             This FMU includes the source CSV under resources/.
             By default the runtime loads that packaged CSV.
             Configure the csv_path model parameter to override it before initialization.
             """
-        ),
+        )
+    else:
+        resources_readme = dedent(
+            """\
+            This FMU does not include the source CSV.
+            Set the csv_path model parameter before initialization to point at an external CSV file.
+            """
+        )
+    (resources_dir / "README.txt").write_text(
+        resources_readme,
         encoding="utf-8",
     )
     runtime_destination = install_runtime_binary(root, model, runtime_library)
@@ -169,6 +183,8 @@ def package_fmu_from_csv(
     model_name: str,
     csv_path_parameter: str = "csv_path",
     runtime_library: str | Path | None = None,
+    *,
+    copy_source_csv: bool = True,
 ) -> Path:
     model = load_csv_model(
         csv_path=csv_path,
@@ -180,7 +196,12 @@ def package_fmu_from_csv(
 
     with TemporaryDirectory(prefix="pyfmu_csv_") as temporary_root:
         stage_dir = Path(temporary_root) / destination.stem
-        create_fmu_skeleton(stage_dir, model, runtime_library=runtime_library)
+        create_fmu_skeleton(
+            stage_dir,
+            model,
+            runtime_library=runtime_library,
+            copy_source_csv=copy_source_csv,
+        )
         with ZipFile(destination, "w", compression=ZIP_DEFLATED) as archive:
             for path in sorted(stage_dir.rglob("*")):
                 if path.is_file():

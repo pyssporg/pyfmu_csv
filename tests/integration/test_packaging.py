@@ -32,6 +32,23 @@ def test_create_fmu_skeleton_creates_expected_layout(tmp_path) -> None:
     assert runtime_copy.read_bytes() == b"fake runtime"
 
 
+def test_create_fmu_skeleton_can_skip_copying_source_csv(tmp_path) -> None:
+    csv_path = tmp_path / "signals.csv"
+    csv_path.write_text("time,temperature,count:Integer,enabled:Boolean,mode:String\n0,1,2,true,auto\n", encoding="utf-8")
+    model = load_csv_model(csv_path, "DemoModel")
+    output_dir = tmp_path / "DemoModel.fmu"
+    runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
+    runtime_library.write_bytes(b"fake runtime")
+
+    create_fmu_skeleton(output_dir, model, runtime_library=runtime_library, copy_source_csv=False)
+
+    assert (output_dir / "modelDescription.xml").is_file()
+    assert (output_dir / "resources" / "model.json").is_file()
+    assert not (output_dir / "resources" / "data" / "signals.csv").exists()
+    model_description_xml = (output_dir / "modelDescription.xml").read_text(encoding="utf-8")
+    assert 'start="data/signals.csv"' not in model_description_xml
+
+
 def test_package_fmu_from_csv_writes_archive(tmp_path) -> None:
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text("time,temperature,count:Integer\n0,1,2\n", encoding="utf-8")
@@ -49,5 +66,30 @@ def test_package_fmu_from_csv_writes_archive(tmp_path) -> None:
     assert "resources/model.json" in names
     assert "resources/data/signals.csv" in names
     assert 'start="data/signals.csv"' in model_description_xml
+    platform_dir, extension = host_platform_tuple()
+    assert f"binaries/{platform_dir}/DemoModel{extension}" in names
+
+
+def test_package_fmu_from_csv_can_skip_copying_source_csv(tmp_path) -> None:
+    csv_path = tmp_path / "signals.csv"
+    csv_path.write_text("time,temperature,count:Integer\n0,1,2\n", encoding="utf-8")
+    output_fmu = tmp_path / "DemoModel.fmu"
+    runtime_library = tmp_path / "libpyfmu_csv_fmi2_cs.so"
+    runtime_library.write_bytes(b"fake runtime")
+
+    package_fmu_from_csv(
+        csv_path,
+        output_fmu,
+        "DemoModel",
+        runtime_library=runtime_library,
+        copy_source_csv=False,
+    )
+
+    assert output_fmu.is_file()
+    with ZipFile(output_fmu) as archive:
+        names = set(archive.namelist())
+        model_description_xml = archive.read("modelDescription.xml").decode("utf-8")
+    assert "resources/data/signals.csv" not in names
+    assert 'start="data/signals.csv"' not in model_description_xml
     platform_dir, extension = host_platform_tuple()
     assert f"binaries/{platform_dir}/DemoModel{extension}" in names
