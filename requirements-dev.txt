@@ -1,0 +1,7 @@
+# Development/test install for this repository. Dependency versions live in
+# pyproject.toml (dev extra: pytest, fmpy); this file delegates to it so the
+# third-party pins cannot drift from the package metadata.
+#
+# Requires the native runtime built first (setup.py fails otherwise):
+#   cmake -S . -B build && cmake --build build -j
+-e ".[dev]"

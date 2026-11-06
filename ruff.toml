@@ -1,0 +1,5 @@
+# Baseline exemptions for ruff's default rule set (IMP-002). Existing
+# violations are config-exempted here rather than source-edited; the CI lint
+# gate fails on any rule NOT on this list.
+[lint]
+ignore = ["F401", "I001", "RUF100", "UP037"]
